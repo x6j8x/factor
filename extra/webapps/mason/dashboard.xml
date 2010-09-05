@@ -1,0 +1,34 @@
+<?xml version='1.0' ?>
+
+<t:chloe xmlns:t="http://factorcode.org/chloe/1.0">
+	<t:title>Mason dashboard</t:title>
+
+	<h1>Crashed build machines</h1>
+	<p>Crashed machines have not sent a heartbeat for several hours:</p>
+
+	<t:xml t:name="crashed" />
+
+	<h1>Broken build machines</h1>
+	<p>Broken machines have not had a successful build for over a week:</p>
+
+	<t:xml t:name="broken" />
+
+	<h1>Force build now</h1>
+	<p>Requires build engineer status.</p>
+
+	<t:form t:action="$mason-app/dashboard/increment-counter">
+		<p><button type="submit">Increment counter</button></p>
+	</t:form>
+
+	<h1>Make a release</h1>
+	<p>Requires build engineer status.</p>
+
+	<t:form t:action="$mason-app/dashboard/make-release">
+		<table>
+			<tr><td>Version:</td><td><t:field t:name="version" /></td></tr>
+			<tr><td>Announcement URL:</td><td><t:field t:name="announcement-url" /></td></tr>
+		</table>
+
+		<p><button type="submit">Go</button></p>
+	</t:form>
+</t:chloe>
