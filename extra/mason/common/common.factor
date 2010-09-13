@@ -1,4 +1,4 @@
-! Copyright (C) 2008, 2009 Eduardo Cavazos, Slava Pestov.
+! Copyright (C) 2008, 2010 Eduardo Cavazos, Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: kernel namespaces sequences splitting system accessors
 math.functions make io io.files io.pathnames io.directories
@@ -20,16 +20,19 @@ SYMBOL: current-git-id
     #! 30 minutes to complete, to catch hangs.
     >process 30 minutes >>timeout try-output-process ;
 
-HOOK: really-delete-tree os ( path -- )
+HOOK: (really-delete-tree) os ( path -- )
 
-M: windows really-delete-tree
+M: windows (really-delete-tree)
     #! Workaround: Cygwin GIT creates read-only files for
     #! some reason.
     [ { "chmod" "ug+rw" "-R" } swap absolute-path suffix short-running-process ]
     [ delete-tree ]
     bi ;
 
-M: unix really-delete-tree delete-tree ;
+M: unix (really-delete-tree) delete-tree ;
+
+: really-delete-tree ( path -- )
+    dup exists? [ (really-delete-tree) ] [ drop ] if ;
 
 : retry ( n quot -- )
     [ iota ] dip
@@ -65,21 +68,7 @@ M: unix really-delete-tree delete-tree ;
 
 SYMBOL: stamp
 
-: builds/factor ( -- path ) builds-dir get "factor" append-path ;
 : build-dir ( -- path ) builds-dir get stamp get append-path ;
-
-: prepare-build-machine ( -- )
-    builds-dir get make-directories
-    builds-dir get
-    [ { "git" "clone" "git://factorcode.org/git/factor.git" } try-output-process ]
-    with-directory ;
-
-: git-id ( -- id )
-    { "git" "show" } utf8 [ lines ] with-process-reader
-    first " " split second ;
-
-: ?prepare-build-machine ( -- )
-    builds/factor exists? [ prepare-build-machine ] unless ;
 
 CONSTANT: load-all-vocabs-file "load-everything-vocabs"
 CONSTANT: load-all-errors-file "load-everything-errors"
