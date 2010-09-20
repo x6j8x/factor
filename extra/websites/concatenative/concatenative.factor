@@ -26,7 +26,7 @@ webapps.wiki
 webapps.user-admin
 webapps.help
 webapps.mason
-mason.server ;
+webapps.mason.backend ;
 IN: websites.concatenative
 
 : test-db ( -- db ) "resource:test.db" <sqlite-db> ;
@@ -125,7 +125,7 @@ SYMBOL: dh-file
         8080 >>insecure
         8431 >>secure ;
 
-: start-website ( -- )
+: start-website ( -- server )
     test-db start-expiring
     test-db start-update-task
     http-insomniac

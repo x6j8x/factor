@@ -35,7 +35,7 @@ struct factor_vm
 	int callback_id;
 
 	/* Pooling unused contexts to make context allocation cheaper */
-	std::vector<context *> unused_contexts;
+	std::list<context *> unused_contexts;
 
 	/* Active contexts, for tracing by the GC */
 	std::set<context *> active_contexts;
@@ -167,7 +167,6 @@ struct factor_vm
 	void primitive_profiling();
 
 	// errors
-	void throw_error(cell error);
 	void general_error(vm_error_type error, cell arg1, cell arg2);
 	void type_error(cell type, cell tagged);
 	void not_implemented_error();
