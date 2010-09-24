@@ -1,9 +1,10 @@
 ! Copyright (C) 2007, 2009 Slava Pestov, Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors alien alien.c-types alien.data classes.struct
-combinators destructors io.backend io.ports io.files.windows
-io.sockets io.sockets.private kernel libc math sequences system
-windows.handles windows.kernel32 windows.types windows.winsock ;
+combinators destructors io.backend io.files.windows io.ports
+io.sockets io.sockets.icmp io.sockets.private kernel libc math
+sequences system windows.handles windows.kernel32 windows.types
+windows.winsock ;
 FROM: namespaces => get ;
 IN: io.sockets.windows
 
@@ -41,8 +42,8 @@ M: win32-socket dispose* ( stream -- )
     <win32-socket> |dispose add-completion ;
 
 : open-socket ( addrspec type -- win32-socket )
-    [ protocol-family ] dip
-    0 f 0 WSASocket-flags WSASocket
+    [ drop protocol-family ] [ swap protocol ] 2bi
+    f 0 WSASocket-flags WSASocket
     dup socket-error
     opened-socket ;
 
@@ -82,6 +83,8 @@ M: object (server) ( addrspec -- handle )
 M: windows (datagram) ( addrspec -- handle )
     [ SOCK_DGRAM server-socket ] with-destructors ;
 
+M: windows (raw) ( addrspec -- handle )
+    [ SOCK_RAW server-socket ] with-destructors ;
 
 : malloc-int ( n -- alien )
     <int> malloc-byte-array ; inline

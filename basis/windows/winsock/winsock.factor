@@ -96,7 +96,7 @@ CONSTANT: INADDR_ANY 0
 
 : INVALID_SOCKET ( -- n ) -1 <alien> ; inline
 
-CONSTANT: SOCKET_ERROR -1
+: SOCKET_ERROR ( -- n ) -1 <alien> ; inline
 
 CONSTANT: SD_RECV 0
 CONSTANT: SD_SEND 1
@@ -125,6 +125,11 @@ STRUCT: hostent
     { addrtype short }
     { length short }
     { addr-list void* } ;
+
+STRUCT: protoent
+    { name c-string }
+    { aliases void* }
+    { proto short } ;
 
 STRUCT: addrinfo
     { flags int }
@@ -170,6 +175,8 @@ FUNCTION: int recv ( SOCKET s, c-string buf, int len, int flags ) ;
 
 FUNCTION: int getsockname ( SOCKET s, sockaddr-in* address, int* addrlen ) ;
 FUNCTION: int getpeername ( SOCKET s, sockaddr-in* address, int* addrlen ) ;
+
+FUNCTION: protoent* getprotobyname ( c-string name ) ;
 
 TYPEDEF: uint SERVICETYPE
 TYPEDEF: OVERLAPPED WSAOVERLAPPED
@@ -376,7 +383,6 @@ FUNCTION: DWORD WSAWaitForMultipleEvents ( DWORD cEvents,
 
 LIBRARY: mswsock
 
-! Not in Windows CE
 FUNCTION: int AcceptEx ( void* listen, void* accept, void* out-buf, int recv-len, int addr-len, int remote-len, void* out-len, void* overlapped ) ;
 
 FUNCTION: void GetAcceptExSockaddrs (
