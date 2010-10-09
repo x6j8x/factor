@@ -16,6 +16,8 @@ IN: io.sockets
     { [ os unix? ] [ "unix.ffi" ] }
 } cond use-vocab >>
 
+GENERIC# with-port 1 ( addrspec port -- addrspec )
+
 ! Addressing
 <PRIVATE
 
@@ -36,8 +38,6 @@ GENERIC: address-size ( addrspec -- n )
 GENERIC: inet-ntop ( data addrspec -- str )
 
 GENERIC: inet-pton ( str addrspec -- data )
-
-GENERIC# with-port 1 ( addrspec port -- addrspec )
 
 : make-sockaddr/size ( addrspec -- sockaddr size )
     [ make-sockaddr ] [ sockaddr-size ] bi ;
@@ -372,8 +372,13 @@ M: string resolve-host
     [ getaddrinfo addrinfo-error ] keep *void* addrinfo memory>struct
     [ parse-addrinfo-list ] keep freeaddrinfo ;
 
+M: string with-port <inet> ;
+
 M: hostname resolve-host
     host>> resolve-host ;
+
+M: hostname with-port
+    [ host>> ] dip <inet> ;
 
 M: inet resolve-host
     [ call-next-method ] [ port>> ] bi '[ _ with-port ] map ;
