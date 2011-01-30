@@ -19,7 +19,7 @@ $nl
 "Inputs and outputs are typically named after some pun on their data type, or a description of the value's purpose if the type is very general. The following are some examples of value names:"
 { $table
     { { { $snippet "?" } } "a boolean" }
-    { { { $snippet "<=>" } } { "an ordering sepcifier; see " { $link "order-specifiers" } } }
+    { { { $snippet "<=>" } } { "an ordering specifier; see " { $link "order-specifiers" } } }
     { { { $snippet "elt" } } "an object which is an element of a sequence" }
     { { { $snippet "m" } ", " { $snippet "n" } } "an integer" }
     { { { $snippet "obj" } } "an object" }
@@ -143,4 +143,4 @@ HELP: effect>string
 
 HELP: stack-effect
 { $values { "word" word } { "effect/f" { $maybe effect } } }
-{ $description "Outputs the stack effect of a word; either a stack effect declared with " { $link POSTPONE: ( } ", or an inferred stack effect (see " { $link "inference" } "." } ;
+{ $description "Outputs the stack effect of a word; either a stack effect declared with " { $link POSTPONE: ( } ", or an inferred stack effect (see " { $link "inference" } ")." } ;

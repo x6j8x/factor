@@ -190,7 +190,7 @@ $nl
 { $subsections
     "tuple-inheritance-example"
     "tuple-inheritance-anti-example"
-} 
+}
 "Declaring a tuple class final prohibits other classes from subclassing it:"
 { $subsections POSTPONE: final }
 { $see-also "call-next-method" "parametrized-constructors" "unions" "mixins" } ;
@@ -215,12 +215,14 @@ ARTICLE: "tuple-examples" "Tuple examples"
 { $table
     { "Reader" "Writer" "Setter" "Changer" }
     { { $snippet "name>>" } { $snippet "name<<" } { $snippet ">>name" } { $snippet "change-name" } }
+    { { $snippet "position>>" } { $snippet "position<<" } { $snippet ">>position" } { $snippet "change-position" } }
     { { $snippet "salary>>" } { $snippet "salary<<" } { $snippet ">>salary" } { $snippet "change-salary" } }
-    { { $snippet "position>>" } { $snippet "position<<" } { $snippet ">>position" } { $snippet "change-position" }   }
 }
 "We can define a constructor which makes an empty employee:"
-{ $code ": <employee> ( -- employee )"
-    "    employee new ;" }
+{ $code
+    ": <employee> ( -- employee )"
+    "    employee new ;"
+}
 "Or we may wish the default constructor to always give employees a starting salary:"
 { $code
     ": <employee> ( -- employee )"
@@ -442,7 +444,7 @@ HELP: boa
 { $values { "slots..." "slot values" } { "class" tuple-class } { "tuple" tuple } }
 { $description "Creates a new instance of " { $snippet "class" } " and fill in the slots from the stack, with the top-most stack element being stored in the right-most slot." }
 { $notes "The name " { $snippet "boa" } " is shorthand for “by order of arguments”, and “BOA constructor” is a pun on “boa constrictor”." }
-{ $errors "Throws an error if the slot values do not match class declarations on slots (see" { $link "tuple-declarations" } ")." } ;
+{ $errors "Throws an error if the slot values do not match class declarations on slots (see " { $link "tuple-declarations" } ")." } ;
 
 HELP: bad-superclass
 { $error-description "Thrown if an attempt is made to subclass a class that is not a tuple class, or a tuple class declared " { $link POSTPONE: final } "." } ;
