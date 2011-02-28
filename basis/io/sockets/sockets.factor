@@ -1,10 +1,10 @@
-! Copyright (C) 2007, 2010 Slava Pestov, Doug Coleman,
+! Copyright (C) 2007, 2011 Slava Pestov, Doug Coleman,
 ! Daniel Ehrenberg.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors alien.c-types alien.data alien.strings arrays
 assocs byte-arrays classes classes.struct combinators
 combinators.short-circuit continuations destructors fry generic
-grouping init io.backend io.binary io.encodings
+grouping init io.backend io.pathnames io.binary io.encodings
 io.encodings.ascii io.encodings.binary io.ports
 io.streams.duplex kernel math math.parser memoize namespaces
 parser present sequences splitting strings summary system
@@ -55,10 +55,10 @@ HOOK: addrspec-of-family os ( af -- addrspec )
 
 PRIVATE>
 
-TUPLE: local { path read-only } ;
+TUPLE: local { path string read-only } ;
 
 : <local> ( path -- addrspec )
-    normalize-path local boa ;
+    absolute-path local boa ;
 
 M: local present path>> "Unix domain socket: " prepend ;
 
@@ -125,9 +125,11 @@ M: inet4 present
 
 M: inet4 protocol drop 0 ;
 
-TUPLE: ipv6 { host ?string read-only } ;
+TUPLE: ipv6
+{ host ?string read-only }
+{ scope-id integer read-only } ;
 
-C: <ipv6> ipv6
+: <ipv6> ( host -- ipv6 ) 0 ipv6 boa ;
 
 M: ipv6 inet-ntop ( data addrspec -- str )
     drop 16 memory>byte-array 2 <groups> [ be> >hex ] map ":" join ;
@@ -184,23 +186,31 @@ M: ipv6 make-sockaddr ( inet -- sockaddr )
         AF_INET6 >>family
         swap
         [ port>> htons >>port ]
-        [ host>> "::" or ]
-        [ inet-pton >>addr ] tri ;
+        [ [ host>> "::" or ] keep inet-pton >>addr ]
+        [ scope-id>> >>scopeid ]
+        tri ;
 
 M: ipv6 parse-sockaddr
-    [ addr>> ] dip inet-ntop <ipv6> ;
+    [ [ addr>> ] dip inet-ntop ] [ drop scopeid>> ] 2bi
+    ipv6 boa ;
+
+M: ipv6 present
+    [ host>> ] [ scope-id>> ] bi
+    [ number>string "%" glue ] unless-zero ;
 
 TUPLE: inet6 < ipv6 { port integer read-only } ;
 
-C: <inet6> inet6
+: <inet6> ( host port -- inet6 ) [ 0 ] dip inet6 boa ;
 
-M: ipv6 with-port [ host>> ] dip <inet6> ;
+M: ipv6 with-port
+    [ [ host>> ] [ scope-id>> ] bi ] dip
+    inet6 boa ;
 
 M: inet6 parse-sockaddr
     [ call-next-method ] [ drop port>> ntohs ] 2bi with-port ;
 
 M: inet6 present
-    [ host>> ] [ port>> number>string ] bi ":" glue ;
+    [ call-next-method ] [ port>> number>string ] bi ":" glue ;
 
 M: inet6 protocol drop 0 ;
 
