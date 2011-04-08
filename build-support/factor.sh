@@ -119,18 +119,18 @@ check_library_exists() {
     GCC_OUT=factor-library-test.out
     $ECHO -n "Checking for library $1..."
     $ECHO "int main(){return 0;}" > $GCC_TEST
-    $CC $GCC_TEST -o $GCC_OUT -l $1
+    $CC $GCC_TEST -o $GCC_OUT -l $1 2>&-
     if [[ $? -ne 0 ]] ; then
         $ECHO "not found!"
-        $ECHO "Warning: library $1 not found."
         $ECHO "***Factor will compile NO_UI=1"
         NO_UI=1
+    else
+        $ECHO "found."
     fi
     $DELETE -f $GCC_TEST
     check_ret $DELETE
     $DELETE -f $GCC_OUT
     check_ret $DELETE
-    $ECHO "found."
 }
 
 check_X11_libraries() {
@@ -141,9 +141,26 @@ check_X11_libraries() {
     fi
 }
 
+check_gtk_libraries() {
+    if [ -z "$NO_UI" ]; then
+        check_library_exists gobject-2.0
+        check_library_exists gtk-x11-2.0
+        check_library_exists gdk-x11-2.0
+        check_library_exists gdk_pixbuf-2.0
+        check_library_exists gtkglext-x11-1.0
+        check_library_exists atk-1.0
+        check_library_exists gio-2.0
+        check_library_exists gdkglext-x11-1.0
+        check_library_exists pango-1.0
+    fi
+}
+
+
 check_libraries() {
     case $OS in
-            linux) check_X11_libraries;;
+            linux) check_X11_libraries
+                   check_gtk_libraries;;
+            unix) check_gtk_libraries;;
     esac
 }
 
@@ -532,12 +549,12 @@ make_boot_image() {
 
 }
 
-install_build_system_apt() {
-    sudo apt-get --yes install libc6-dev libpango1.0-dev libx11-dev xorg-dev wget git-core git-doc rlwrap gcc make
+install_deps_linux() {
+    sudo apt-get --yes install libc6-dev libpango1.0-dev libx11-dev xorg-dev libgtk2.0-dev libgtkglext1-dev wget git-core git-doc rlwrap gcc make
     check_ret sudo
 }
 
-install_build_system_port() {
+install_deps_macosx() {
     test_program_installed git
     if [[ $? -ne 1 ]] ; then
         ensure_program_installed yes
@@ -551,7 +568,7 @@ install_build_system_port() {
 }
 
 usage() {
-    $ECHO "usage: $0 install|install-x11|install-macosx|self-update|quick-update|update|bootstrap|dlls|net-bootstrap|make-target|report [optional-target]"
+    $ECHO "usage: $0 install|install-x11|install-macosx|self-update|quick-update|update|bootstrap|net-bootstrap|make-target|report [optional-target]"
     $ECHO "If you are behind a firewall, invoke as:"
     $ECHO "env GIT_PROTOCOL=http $0 <command>"
     $ECHO ""
@@ -571,8 +588,8 @@ set_delete
 
 case "$1" in
     install) install ;;
-    install-x11) install_build_system_apt; install ;;
-    install-macosx) install_build_system_port; install ;;
+    deps-linux) install_deps_linux ;;
+    deps-macosx) install_deps_macosx ;;
     self-update) update; make_boot_image; bootstrap;;
     quick-update) update; refresh_image ;;
     update) update; update_bootstrap ;;
