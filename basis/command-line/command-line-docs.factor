@@ -89,7 +89,6 @@ ARTICLE: "standard-cli-args" "Command line switches for general usage"
     { { $snippet "-e=" { $emphasis "code" } } { "This specifies a code snippet to evaluate. If you want Factor to exit immediately after, also specify " { $snippet "-run=none" } "." } }
     { { $snippet "-run=" { $emphasis "vocab" } } { { $snippet { $emphasis "vocab" } } " is the name of a vocabulary with a " { $link POSTPONE: MAIN: } " hook to run on startup, for example " { $vocab-link "listener" } ", " { $vocab-link "ui.tools" } " or " { $vocab-link "none" } "." } }
     { { $snippet "-no-user-init" } { "Inhibits the running of user initialization files on startup. See " { $link "rc-files" } "." } }
-    { { $snippet "-quiet" } { "If set, " { $link run-file } " and " { $link require } " will not print load messages." } }
 } ;
 
 ARTICLE: ".factor-boot-rc" "Bootstrap initialization file"
@@ -106,7 +105,7 @@ $nl
 { $subsections run-user-init } ;
 
 ARTICLE: ".factor-roots" "Additional vocabulary roots file"
-"The vocabulary roots file is named " { $snippet ".factor-roots" } " on Windows and " { $snippet ".factor-roots" } " on Unix. If it exists, it is loaded every time Factor starts. It contains a newline-separated list of " { $link "vocabs.roots" } "."
+"The vocabulary roots file is named " { $snippet ".factor-roots" } ". If it exists, it is loaded every time Factor starts. It contains a newline-separated list of " { $link "vocabs.roots" } "."
 $nl
 "A word to run this file from an existing Factor session:"
 { $subsections load-vocab-roots } ;

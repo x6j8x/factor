@@ -1,8 +1,9 @@
 ! Copyright (C) 2010 Anton Gorenko.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: alien alien.destructors alien.libraries alien.syntax
-combinators kernel gobject-introspection
-gobject-introspection.standard-types system ;
+USING: accessors alien alien.destructors alien.libraries
+alien.strings alien.syntax combinators gobject-introspection
+gobject-introspection.standard-types io.encodings.utf8 kernel
+system ;
 IN: glib.ffi
 
 LIBRARY: glib
@@ -15,7 +16,7 @@ LIBRARY: glib
 } cond
 >>
 
-IMPLEMENT-STRUCTS: GPollFD GSource GSourceFuncs ;
+IMPLEMENT-STRUCTS: GError GPollFD GSource GSourceFuncs ;
 
 CONSTANT: G_MININT8   HEX: -80
 CONSTANT: G_MAXINT8   HEX:  7f
@@ -38,3 +39,18 @@ DESTRUCTOR: g_free
 CALLBACK: gboolean GSourceFuncsPrepareFunc ( GSource* source, gint* timeout_ ) ;
 CALLBACK: gboolean GSourceFuncsCheckFunc ( GSource* source ) ;
 CALLBACK: gboolean GSourceFuncsDispatchFunc ( GSource* source, GSourceFunc callback, gpointer user_data ) ;
+
+ERROR: g-error domain code message ;
+
+: GError>g-error ( GError -- g-error )
+    [ domain>> g_quark_to_string utf8 alien>string ]
+    [ code>> ]
+    [ message>> utf8 alien>string ] tri
+    \ g-error boa ;
+
+: handle-GError ( GError/f -- )
+    [
+        [ GError>g-error ]
+        [ g_error_free ] bi
+        throw
+    ] when* ;

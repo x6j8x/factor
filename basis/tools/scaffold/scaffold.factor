@@ -16,10 +16,6 @@ SYMBOL: using
 ERROR: not-a-vocab-root string ;
 ERROR: vocab-name-contains-separator path ;
 ERROR: vocab-name-contains-dot path ;
-ERROR: bad-developer-name name ;
-
-M: bad-developer-name summary
-    drop "Developer name must be a string." ;
 
 <PRIVATE
 
@@ -347,6 +343,8 @@ SYMBOL: examples-flag
 : scaffold-factor-rc ( -- )
     ".factor-rc" scaffold-rc ;
 
+: scaffold-factor-roots ( -- )
+    ".factor-roots" scaffold-rc ;
 
 HOOK: scaffold-emacs os ( -- )
 

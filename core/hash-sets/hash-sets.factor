@@ -2,14 +2,14 @@
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors assocs hashtables kernel sets
 sequences parser ;
-QUALIFIED: sets
+
 IN: hash-sets
 
 ! In a better implementation, less memory would be used
 TUPLE: hash-set { table hashtable read-only } ;
 
 : <hash-set> ( members -- hash-set )
-    H{ } clone [ [ dupd set-at ] curry each ] keep hash-set boa ;
+    unique hash-set boa ; inline
 
 INSTANCE: hash-set set
 M: hash-set in? table>> key? ; inline

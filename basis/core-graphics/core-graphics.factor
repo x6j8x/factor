@@ -99,6 +99,20 @@ FUNCTION: void CGContextSetShouldSmoothFonts (
    bool shouldSmoothFonts
 ) ;
 
+FUNCTION: void CGContextDrawImage (
+   CGContextRef c,
+   CGRect rect,
+   CGImageRef image
+) ;
+
+FUNCTION: size_t CGImageGetWidth (
+   CGImageRef image
+) ;
+
+FUNCTION: size_t CGImageGetHeight (
+   CGImageRef image
+) ;
+
 FUNCTION: void* CGBitmapContextGetData ( CGContextRef c ) ;
 
 CONSTANT: kCGLRendererGenericFloatID HEX: 00020400
@@ -141,4 +155,5 @@ PRIVATE>
 : make-bitmap-image ( dim quot -- image )
     '[ <CGBitmapContext> &CGContextRelease @ ] make-memory-bitmap
     ARGB >>component-order
-    ubyte-components >>component-type ; inline
+    ubyte-components >>component-type
+    t >>premultiplied-alpha? ; inline
