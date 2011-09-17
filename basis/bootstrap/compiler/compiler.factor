@@ -107,6 +107,17 @@ gc
 
     "." write flush
 
+    os windows? [
+        "GetLastError" "windows.kernel32" lookup
+        "FormatMessageW" "windows.kernel32" lookup
+        2array compile-unoptimized
+    ] when
+
+    os unix? [
+        "(dlerror)" "alien.libraries.unix" lookup
+        1array compile-unoptimized
+    ] when
+
     {
         malloc calloc free memcpy
     } compile-unoptimized
