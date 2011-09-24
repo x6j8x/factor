@@ -4,6 +4,7 @@ USING: accessors arrays definitions kernel kernel.private
 slots.private math namespaces sequences strings vectors sbufs
 quotations assocs hashtables sorting vocabs math.order sets
 words.private ;
+FROM: assocs => change-at ;
 IN: words
 
 : word ( -- word ) \ word get-global ;
@@ -30,7 +31,7 @@ M: word definition def>> ;
     [ pick props>> ?set-at >>props drop ]
     [ nip remove-word-prop ] if ;
 
-: change-word-prop ( word prop quot -- )
+: change-word-prop ( ..a word prop quot: ( ..a value -- ..b newvalue ) -- ..b )
     [ swap props>> ] dip change-at ; inline
 
 : reset-props ( word seq -- ) [ remove-word-prop ] with each ;

@@ -7,6 +7,7 @@ destructors dlists fry init kernel lexer make math namespaces
 parser sequences sets strings threads ui.backend ui.gadgets
 ui.gadgets.private ui.gadgets.worlds ui.gestures vocabs.parser
 words ;
+FROM: namespaces => change-global ;
 IN: ui
 
 <PRIVATE
@@ -141,7 +142,7 @@ SYMBOL: ui-thread
 
 PRIVATE>
 
-: find-window ( quot -- world )
+: find-window ( quot: ( world -- ? ) -- world )
     [ windows get values ] dip
     '[ dup children>> [ ] [ nip first ] if-empty @ ]
     find-last nip ; inline

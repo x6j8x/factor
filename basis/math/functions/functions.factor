@@ -155,6 +155,23 @@ M: real absq sq ; inline
 : >=1? ( x -- ? )
     dup complex? [ drop f ] [ 1 >= ] if ; inline
 
+GENERIC: frexp ( x -- y exp )
+
+M: float frexp
+    dup fp-special? [ dup zero? ] unless* [ 0 ] [
+        double>bits
+        [ HEX: 800f,ffff,ffff,ffff bitand 0.5 double>bits bitor bits>double ]
+        [ -52 shift HEX: 7ff bitand 1022 - ] bi
+    ] if ; inline
+
+M: integer frexp
+    [ 0.0 0 ] [
+        dup 0 > [ 1 ] [ abs -1 ] if swap dup log2 [
+            52 swap - shift HEX: 000f,ffff,ffff,ffff bitand
+            0.5 double>bits bitor bits>double
+        ] [ 1 + ] bi [ * ] dip
+    ] if-zero ; inline
+
 GENERIC: log ( x -- y )
 
 M: float log dup 0.0 >= [ flog ] [ 0.0 rect> log ] if ; inline
@@ -162,6 +179,29 @@ M: float log dup 0.0 >= [ flog ] [ 0.0 rect> log ] if ; inline
 M: real log >float log ; inline
 
 M: complex log >polar [ flog ] dip rect> ; inline
+
+<PRIVATE
+
+: most-negative-finite-float ( -- x )
+    HEX: -1.ffff,ffff,ffff,fp1023 >integer ; inline
+: most-positive-finite-float ( -- x )
+    HEX:  1.ffff,ffff,ffff,fp1023 >integer ; inline
+CONSTANT: log-2   HEX: 1.62e42fefa39efp-1
+CONSTANT: log10-2 HEX: 1.34413509f79ffp-2
+
+: (representable-as-float?) ( x -- ? )
+    most-negative-finite-float
+    most-positive-finite-float between? ; inline
+
+: (bignum-log) ( n log-quot: ( x -- y ) log-2 -- log )
+    [ dup ] dip '[
+        dup (representable-as-float?)
+        [ >float @ ] [ frexp [ @ ] [ _ * ] bi* + ] if
+    ] call ; inline
+
+PRIVATE>
+
+M: bignum log [ log ] log-2 (bignum-log) ;
 
 GENERIC: log1+ ( x -- y )
 
@@ -176,6 +216,8 @@ GENERIC: log10 ( x -- y ) foldable
 M: real log10 >float flog10 ; inline
 
 M: complex log10 log 10 log / ; inline
+
+M: bignum log10 [ log10 ] log10-2 (bignum-log) ;
 
 GENERIC: cos ( x -- y ) foldable
 
