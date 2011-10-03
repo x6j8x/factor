@@ -93,10 +93,10 @@ HELP: histogram-by
 }
 { $description "Returns a hashtable where the keys are the elements of the sequence binned by being passed through " { $snippet "quot" } ", and the values are the number of times members of each bin appeared in that sequence." }
 { $examples
-    { $example "! Count the number of times letters and non-letters appear in a sequence."
+    { $unchecked-example "! Count the number of times letters and non-letters appear in a sequence."
                "USING: prettyprint math.statistics unicode.categories ;"
                "\"aaa123bc\" [ letter? ] histogram-by ."
-               "H{ { f 3 } { t 5 } }"
+               "H{ { t 5 } { f 3 } }"
     }
 } ;
 

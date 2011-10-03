@@ -134,7 +134,7 @@ M: class final-class? drop t ;
     superclasses [ "slots" word-prop length ] map-sum ;
 
 : boa-check-quot ( class -- quot )
-    all-slots [ class>> instance-check-quot ] map spread>quot
+    all-slots [ class>> instance-check-quot ] map shallow-spread>quot
     f like ;
 
 : define-boa-check ( class -- )
@@ -290,16 +290,24 @@ M: tuple-class (define-tuple-class)
     3dup tuple-class-unchanged?
     [ 2drop ?define-symbol ] [ redefine-tuple-class ] if ;
 
+PREDICATE: error-class < tuple-class
+    "error-class" word-prop ;
+
+M: error-class reset-class
+    [ call-next-method ] [ "error-class" remove-word-prop ] bi ;
+
 : define-error-class ( class superclass slots -- )
-    error-slots
-    [ define-tuple-class ]
-    [ 2drop reset-generic ]
-    [
-        2drop
-        [ dup [ boa throw ] curry ]
-        [ all-slots thrower-effect ]
-        bi define-declared
-    ] 3tri ;
+    error-slots {
+        [ define-tuple-class ]
+        [ 2drop reset-generic ]
+        [ 2drop t "error-class" set-word-prop ]
+        [
+            2drop
+            [ dup [ boa throw ] curry ]
+            [ all-slots thrower-effect ]
+            bi define-declared
+        ]
+    } 3cleave ;
 
 : boa-effect ( class -- effect )
     [ all-slots [ name>> ] map ] [ name>> 1array ] bi <effect> ;
@@ -342,17 +350,17 @@ M: tuple clone (clone) ; inline
 
 M: tuple equal? over tuple? [ tuple= ] [ 2drop f ] if ;
 
-GENERIC: tuple-hashcode ( n tuple -- x )
-
-M: tuple tuple-hashcode
+: tuple-hashcode ( depth obj -- hash )
     [
-        [ class hashcode ] [ tuple-size iota ] [ ] tri
-        [ rot ] dip [
-            swapd array-nth hashcode* sequence-hashcode-step
-        ] 2curry each
-    ] recursive-hashcode ;
+        [ drop 1000003 ] dip
+        [ class hashcode ] [ tuple-size ] bi
+        [ dup fixnum+fast 82520 fixnum+fast ] [ iota ] bi
+    ] 2keep [
+        swapd array-nth hashcode* rot fixnum-bitxor
+        pick fixnum*fast [ [ fixnum+fast ] keep ] dip swap
+    ] 2curry each drop nip 97531 fixnum+fast ; inline
 
-M: tuple hashcode* tuple-hashcode ;
+M: tuple hashcode* [ tuple-hashcode ] recursive-hashcode ;
 
 M: tuple-class new
     dup "prototype" word-prop [ (clone) ] [ tuple-layout <tuple> ] ?if ;

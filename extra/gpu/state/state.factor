@@ -4,7 +4,7 @@ combinators gpu kernel literals math math.rectangles opengl
 opengl.gl sequences typed variants specialized-arrays ;
 QUALIFIED-WITH: alien.c-types c
 FROM: math => float ;
-SPECIALIZED-ARRAY: int
+SPECIALIZED-ARRAY: c:int
 SPECIALIZED-ARRAY: c:float
 IN: gpu.state
 
@@ -416,18 +416,18 @@ M: mask-state set-gpu-state*
     [ set-gpu-state* ] if ; inline
 
 : get-gl-bool ( enum -- value )
-    0 uchar <ref> [ glGetBooleanv ] keep uchar deref c-bool> ;
+    0 c:uchar <ref> [ glGetBooleanv ] keep c:uchar deref c-bool> ;
 : get-gl-int ( enum -- value )
-    0 int <ref> [ glGetIntegerv ] keep int deref ;
+    0 c:int <ref> [ glGetIntegerv ] keep c:int deref ;
 : get-gl-float ( enum -- value )
     0 c:float <ref> [ glGetFloatv ] keep c:float deref ;
 
 : get-gl-bools ( enum count -- value )
     <byte-array> [ glGetBooleanv ] keep [ c-bool> ] { } map-as ;
 : get-gl-ints ( enum count -- value )
-    <int-array> [ glGetIntegerv ] keep ;
+    c:int <c-array> [ glGetIntegerv ] keep ;
 : get-gl-floats ( enum count -- value )
-    <float-array> [ glGetFloatv ] keep ;
+    c:float <c-array> [ glGetFloatv ] keep ;
 
 : get-gl-rect ( enum -- value )
     4 get-gl-ints first4 [ 2array ] 2bi@ <rect> ;

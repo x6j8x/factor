@@ -8,7 +8,7 @@ destructors io.encodings.utf8 io.pathnames io.streams.string
 kernel libc literals math mirrors namespaces prettyprint
 prettyprint.config see sequences specialized-arrays system
 tools.test parser lexer eval layouts generic.single classes
-vocabs ;
+vocabs generic ;
 FROM: math => float ;
 FROM: specialized-arrays.private => specialized-array-vocab ;
 QUALIFIED-WITH: alien.c-types c
@@ -305,7 +305,7 @@ SPECIALIZED-ARRAY: struct-test-optimization
 
 [ t ] [
     [ struct-test-optimization memory>struct x>> second ]
-    { memory>struct x>> <direct-int-array> <tuple> <tuple-boa> } inlined?
+    { memory>struct x>> int <c-direct-array> <tuple> <tuple-boa> } inlined?
 ] unit-test
 
 [ f ] [ [ memory>struct y>> ] { memory>struct y>> } inlined? ] unit-test
@@ -328,7 +328,7 @@ STRUCT: clone-test-struct { x int } { y char[3] } ;
     clone-test-struct <struct>
     1 >>x char-array{ 9 1 1 } >>y
     clone
-    [ x>> ] [ y>> >char-array ] bi
+    [ x>> ] [ y>> char >c-array ] bi
 ] unit-test
 
 [ t 1 char-array{ 9 1 1 } ] [
@@ -336,7 +336,7 @@ STRUCT: clone-test-struct { x int } { y char[3] } ;
         clone-test-struct malloc-struct &free
         1 >>x char-array{ 9 1 1 } >>y
         clone
-        [ >c-ptr byte-array? ] [ x>> ] [ y>> >char-array ] tri
+        [ >c-ptr byte-array? ] [ x>> ] [ y>> char >c-array ] tri
     ] with-destructors
 ] unit-test
 
@@ -514,3 +514,33 @@ PACKED-STRUCT: packed-struct-test
 
 [ POSTPONE: PACKED-STRUCT: ]
 [ packed-struct-test struct-definer-word ] unit-test
+
+STRUCT: struct-1 { a c:int } ;
+PACKED-STRUCT: struct-1-packed { a c:int } ;
+UNION-STRUCT: struct-1-union { a c:int } ;
+
+[ "USING: alien.c-types classes.struct ;
+IN: classes.struct.tests
+STRUCT: struct-1 { a int initial: 0 } ;
+" ]
+[ \ struct-1 [ see ] with-string-writer ] unit-test
+[ "USING: alien.c-types classes.struct ;
+IN: classes.struct.tests
+PACKED-STRUCT: struct-1-packed { a int initial: 0 } ;
+" ]
+[ \ struct-1-packed [ see ] with-string-writer ] unit-test
+[ "USING: alien.c-types classes.struct ;
+IN: classes.struct.tests
+STRUCT: struct-1-union { a int initial: 0 } ;
+" ]
+[ \ struct-1-union [ see ] with-string-writer ] unit-test
+
+
+! Bug #206
+STRUCT: going-to-forget { a uint } ;
+[ ] [
+    "IN: classes.struct.tests TUPLE: going-to-forget b ;" eval( -- )
+] unit-test
+[ f ] [ "USING: classes.struct.tests kernel ; M\\ going-to-forget clone" eval( -- obj ) ] unit-test
+[ f ] [ "USING: classes.struct.tests classes.struct kernel ; M\\ going-to-forget struct-slot-values" eval( -- obj ) ] unit-test
+

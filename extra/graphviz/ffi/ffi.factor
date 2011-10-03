@@ -134,11 +134,12 @@ API_textlayout
 API_device
 API_loadimage ;
 
+! This function doesn't exist on the Linux mason in Graphviz 2.28
 FUNCTION: char**
           gvPluginList
           ( GVC_t* gvc, c-string kind, int* size, c-string str ) ;
 
-:: plugin-list ( kind-string -- seq )
+:: Plugin-list ( kind-string -- seq )
     [
         gvContext &gvFreeContext
         kind-string
@@ -146,13 +147,24 @@ FUNCTION: char**
         f
         gvPluginList &(free) :> ret
         size* int deref :> size
-        ret size <direct-void*-array> [
+        ret size void* <c-direct-array> [
             &(free) ascii alien>string
         ] { } map-as
     ] with-destructors ;
 
+! This function doesn't exist on the Windows mason in Graphviz 2.28
+FUNCTION: c-string
+          gvplugin_list
+          ( GVC_t* gvc, api_t api, c-string str ) ;
+
+: plugin-list ( API_t -- seq )
+    '[
+        gvContext &gvFreeContext _ "" gvplugin_list
+        " " split harvest
+    ] with-destructors ;
+    
 PRIVATE>
 
-MEMO: supported-engines ( -- seq ) "layout" plugin-list ;
-MEMO: supported-formats ( -- seq ) "device" plugin-list ;
+MEMO: supported-engines ( -- seq ) API_layout plugin-list ;
+MEMO: supported-formats ( -- seq ) API_device plugin-list ;
 

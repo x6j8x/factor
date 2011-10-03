@@ -227,8 +227,8 @@ FUNCTION: int ffi_test_12 int a int b RECT c int d int e int f ;
 FUNCTION: float ffi_test_23 ( float[3] x, float[3] y ) ;
 
 [ 32.0 ] [
-    { 1.0 2.0 3.0 } >float-array
-    { 4.0 5.0 6.0 } >float-array
+    { 1.0 2.0 3.0 } float >c-array
+    { 4.0 5.0 6.0 } float >c-array
     ffi_test_23
 ] unit-test
 
@@ -334,6 +334,10 @@ FUNCTION: ulonglong ffi_test_38 ( ulonglong x, ulonglong y ) ;
 [ t ] [ 31 2^ 32 2^ ffi_test_38 63 2^ = ] unit-test
 
 ! Test callbacks
+: callback-throws ( -- x )
+    int { } cdecl [ "Hi" throw ] alien-callback ;
+
+[ t ] [ callback-throws alien? ] unit-test
 
 : callback-1 ( -- callback ) void { } cdecl [ ] alien-callback ;
 

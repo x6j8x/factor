@@ -2,16 +2,14 @@
 ! John Benediktsson, Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license
 USING: accessors alien alien.c-types alien.data alien.parser
-arrays byte-arrays classes classes.private classes.parser
-classes.tuple classes.tuple.parser classes.tuple.private
-combinators combinators.short-circuit combinators.smart
-cpu.architecture definitions functors.backend fry
-generalizations generic.parser kernel kernel.private lexer libc
-locals macros make math math.order parser quotations sequences
-slots slots.private specialized-arrays vectors words summary
-namespaces assocs vocabs.parser math.functions
-classes.struct.bit-accessors bit-arrays
-stack-checker.dependencies system layouts ;
+arrays byte-arrays classes classes.parser
+classes.struct.bit-accessors classes.tuple classes.tuple.parser
+combinators combinators.smart cpu.architecture fry
+functors.backend generalizations generic.parser kernel
+kernel.private lexer libc locals macros math math.order parser
+quotations sequences slots slots.private specialized-arrays
+stack-checker.dependencies summary vectors vocabs.parser words
+classes.private generic definitions ;
 FROM: delegate.private => group-words slot-group-words ;
 QUALIFIED: math
 IN: classes.struct
@@ -64,7 +62,7 @@ M: struct equal?
 
 M: struct hashcode*
     binary-object over
-    [ <direct-uchar-array> hashcode* ] [ 3drop 0 ] if ; inline
+    [ uchar <c-direct-array> hashcode* ] [ 3drop 0 ] if ; inline
 
 : struct-prototype ( class -- prototype ) "prototype" word-prop ; foldable
 
@@ -197,6 +195,9 @@ M: struct-c-type base-type ;
     [ \ struct-slot-values ] [ struct-slot-values-quot ] bi
     define-inline-method ;
 
+: forget-struct-slot-values-method ( class -- )
+    \ struct-slot-values method forget ;
+
 : clone-underlying ( struct -- byte-array )
     binary-object memory>byte-array ; inline
 
@@ -204,6 +205,9 @@ M: struct-c-type base-type ;
     [ \ clone ]
     [ \ clone-underlying swap literalize \ memory>struct [ ] 3sequence ] bi
     define-inline-method ;
+
+: forget-clone-method ( class -- )
+    \ clone method forget ;
 
 :: c-type-for-class ( class slots size align -- c-type )
     struct-c-type new
@@ -244,7 +248,7 @@ M: struct-bit-slot-spec compute-slot-offset
 PRIVATE>
 
 M: struct byte-length class "struct-size" word-prop ; foldable
-M: struct binary-zero? binary-object <direct-uchar-array> [ 0 = ] all? ; inline
+M: struct binary-zero? binary-object uchar <c-direct-array> [ 0 = ] all? ; inline
 
 ! class definition
 
@@ -317,6 +321,14 @@ ERROR: invalid-struct-slot token ;
     c-type c-type-boxed-class
     dup \ byte-array = [ drop \ c-ptr ] when ;
 
+M: struct-class reset-class
+    [ call-next-method ]
+    [
+        [ forget-struct-slot-values-method ]
+        [ forget-clone-method ] bi
+    ]
+    [ { "c-type" "layout" "struct-size" } reset-props ] tri ;
+
 SYMBOL: bits:
 
 <PRIVATE
@@ -357,7 +369,7 @@ PRIVATE>
 
 <PRIVATE
 : parse-struct-slot ( -- slot )
-    scan scan-c-type \ } parse-until <struct-slot-spec> ;
+    scan-token scan-c-type \ } parse-until <struct-slot-spec> ;
 
 : parse-struct-slots ( slots -- slots' more? )
     scan-token {
@@ -367,7 +379,7 @@ PRIVATE>
     } case ;
 
 : parse-struct-definition ( -- class slots )
-    CREATE-CLASS 8 <vector> [ parse-struct-slots ] [ ] while >array
+    scan-new-class 8 <vector> [ parse-struct-slots ] [ ] while >array
     dup [ name>> ] map check-duplicate-slots ;
 PRIVATE>
 
@@ -390,14 +402,14 @@ SYNTAX: S@
 
 <PRIVATE
 : scan-c-type` ( -- c-type/param )
-    scan dup "{" = [ drop \ } parse-until >array ] [ search ] if ;
+    scan-token dup "{" = [ drop \ } parse-until >array ] [ search ] if ;
 
 : parse-struct-slot` ( accum -- accum )
     scan-string-param scan-c-type` \ } parse-until
     [ <struct-slot-spec> suffix! ] 3curry append! ;
 
 : parse-struct-slots` ( accum -- accum more? )
-    scan {
+    scan-token {
         { ";" [ f ] }
         { "{" [ parse-struct-slot` t ] }
         [ invalid-struct-slot ]
