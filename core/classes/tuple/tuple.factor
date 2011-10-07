@@ -315,13 +315,16 @@ M: error-class reset-class
 : define-boa-word ( word class -- )
     [ [ boa ] curry ] [ boa-effect ] bi define-inline ;
 
+: forget-slot-accessors ( class slots -- )
+    [
+        name>>
+        [ reader-word ?lookup-method forget ]
+        [ writer-word ?lookup-method forget ] 2bi
+    ] with each ;
+
 M: tuple-class reset-class
     [
-        dup "slots" word-prop [
-            name>>
-            [ reader-word method forget ]
-            [ writer-word method forget ] 2bi
-        ] with each
+        dup "slots" word-prop forget-slot-accessors
     ] [
         [ call-next-method ]
         [ { "layout" "slots" "boa-check" "prototype" "final" } reset-props ]
@@ -356,7 +359,7 @@ M: tuple equal? over tuple? [ tuple= ] [ 2drop f ] if ;
         [ class hashcode ] [ tuple-size ] bi
         [ dup fixnum+fast 82520 fixnum+fast ] [ iota ] bi
     ] 2keep [
-        swapd array-nth hashcode* rot fixnum-bitxor
+        swapd array-nth hashcode* >fixnum rot fixnum-bitxor
         pick fixnum*fast [ [ fixnum+fast ] keep ] dip swap
     ] 2curry each drop nip 97531 fixnum+fast ; inline
 

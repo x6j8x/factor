@@ -196,7 +196,7 @@ M: struct-c-type base-type ;
     define-inline-method ;
 
 : forget-struct-slot-values-method ( class -- )
-    \ struct-slot-values method forget ;
+    \ struct-slot-values ?lookup-method forget ;
 
 : clone-underlying ( struct -- byte-array )
     binary-object memory>byte-array ; inline
@@ -207,7 +207,7 @@ M: struct-c-type base-type ;
     define-inline-method ;
 
 : forget-clone-method ( class -- )
-    \ clone method forget ;
+    \ clone ?lookup-method forget ;
 
 :: c-type-for-class ( class slots size align -- c-type )
     struct-c-type new
@@ -322,12 +322,15 @@ ERROR: invalid-struct-slot token ;
     dup \ byte-array = [ drop \ c-ptr ] when ;
 
 M: struct-class reset-class
-    [ call-next-method ]
-    [
-        [ forget-struct-slot-values-method ]
-        [ forget-clone-method ] bi
-    ]
-    [ { "c-type" "layout" "struct-size" } reset-props ] tri ;
+    {
+        [ dup "c-type" word-prop fields>> forget-slot-accessors ]
+        [
+            [ forget-struct-slot-values-method ]
+            [ forget-clone-method ] bi
+        ]
+        [ { "c-type" "layout" "struct-size" } reset-props ]
+        [ call-next-method ]
+    } cleave ;
 
 SYMBOL: bits:
 
