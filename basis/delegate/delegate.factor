@@ -76,9 +76,6 @@ M: broadcast (consult-method-quot)
     [ swap consult-method-quot ] 2bi
     define ;
 
-: change-word-prop ( word prop quot -- )
-    [ swap props>> ] dip change-at ; inline
-
 : each-generic ( consultation quot -- )
     [ [ group>> group-words ] keep ] dip curry each ; inline
 
@@ -94,7 +91,7 @@ M: broadcast (consult-method-quot)
     \ protocol-consult word-prop delete-at ;
 
 : unconsult-method ( word consultation -- )
-    [ class>> swap first method ] keep
+    [ class>> swap first ?lookup-method ] keep
     over [
         over "consultation" word-prop eq?
         [ forget ] [ drop ] if
@@ -127,7 +124,7 @@ M: consultation forget*
 <PRIVATE
 
 : forget-all-methods ( classes words -- )
-    [ first method forget ] cartesian-each ;
+    [ first ?lookup-method forget ] cartesian-each ;
 
 : protocol-users ( protocol -- users )
     protocol-consult keys ;
@@ -158,9 +155,16 @@ M: consultation forget*
 : show-words ( wordlist' -- wordlist )
     [ dup second zero? [ first ] when ] map ;
 
+ERROR: not-a-generic word ;
+
+: check-generic ( generic -- )
+    dup array? [ first ] when
+    dup generic? [ drop ] [ not-a-generic ] if ;
+
 PRIVATE>
 
 : define-protocol ( protocol wordlist -- )
+    dup [ check-generic ] each
     [ drop define-symbol ] [
         fill-in-depth
         [ forget-old-definitions ]
@@ -169,7 +173,7 @@ PRIVATE>
     ] 2bi ;
 
 SYNTAX: PROTOCOL:
-    CREATE-WORD parse-definition define-protocol ;
+    scan-new-word parse-definition define-protocol ;
 
 PREDICATE: protocol < word protocol-words ; ! Subclass of symbol?
 
@@ -184,6 +188,6 @@ M: protocol definer drop \ PROTOCOL: \ ; ;
 M: protocol group-words protocol-words ;
 
 SYNTAX: SLOT-PROTOCOL:
-    CREATE-WORD ";"
+    scan-new-word ";"
     [ [ reader-word ] [ writer-word ] bi 2array ]
     map-tokens concat define-protocol ;

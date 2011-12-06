@@ -104,15 +104,10 @@ TUPLE: run-loop fds sources timers ;
 : (reset-timer) ( timer timestamp -- )
     >CFAbsoluteTime CFRunLoopTimerSetNextFireDate ;
 
-: nano-count>micros ( x -- n )
-    nano-count - 1,000 /f system-micros + ;
-
 : reset-timer ( timer -- )
-    {
-        { [ run-queue deque-empty? not ] [ system-micros ] }
-        { [ sleep-queue heap-empty? not ] [ sleep-queue heap-peek nip nano-count>micros ] }
-        [ system-micros 1,000,000 + ]
-    } cond (reset-timer) ;
+    sleep-time
+    [ 1000 /f ] [ 1,000,000 ] if* system-micros +
+    (reset-timer) ;
 
 PRIVATE>
 
@@ -126,7 +121,7 @@ PRIVATE>
     [ 2drop reset-run-loop yield ] alien-callback ;
 
 : init-thread-timer ( -- )
-    timer-callback <CFTimer> add-timer-to-run-loop ;
+    60 timer-callback <CFTimer> add-timer-to-run-loop ;
 
 : run-one-iteration ( nanos -- handled? )
     reset-run-loop

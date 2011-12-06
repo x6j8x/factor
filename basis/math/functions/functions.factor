@@ -82,8 +82,8 @@ M: complex exp >rect [ exp ] dip polar> ; inline
 : real^? ( x y -- ? )
     2dup [ real? ] both? [ drop 0 >= ] [ 2drop f ] if ; inline
 
-: 0^ ( x -- z )
-    [ 0/0. ] [ 0 < 1/0. 0 ? ] if-zero ; inline
+: 0^ ( zero x -- z )
+    swap [ 0/0. ] swap '[ 0 < 1/0. _ ? ] if-zero ; inline
 
 : (^mod) ( x y n -- z )
     [ make-bits 1 ] dip dup
@@ -94,13 +94,13 @@ M: complex exp >rect [ exp ] dip polar> ; inline
         2nip
     ] [
         swap [ /mod [ over * swapd - ] dip ] keep (gcd)
-    ] if ;
+    ] if ; inline recursive
 
 PRIVATE>
 
 : ^ ( x y -- z )
     {
-        { [ over 0 = ] [ nip 0^ ] }
+        { [ over zero? ] [ 0^ ] }
         { [ dup integer? ] [ integer^ ] }
         { [ 2dup real^? ] [ [ >float ] bi@ fpow ] }
         [ ^complex ]
@@ -109,13 +109,13 @@ PRIVATE>
 : nth-root ( n x -- y ) swap recip ^ ; inline
 
 : gcd ( x y -- a d )
-    [ 0 1 ] 2dip (gcd) dup 0 < [ neg ] when ; foldable
+    [ 0 1 ] 2dip (gcd) dup 0 < [ neg ] when ; inline
 
 : lcm ( a b -- c )
     [ * ] 2keep gcd nip /i ; foldable
 
 : divisor? ( m n -- ? )
-    mod 0 = ;
+    mod 0 = ; inline
 
 ERROR: non-trivial-divisor n ;
 
@@ -155,6 +155,23 @@ M: real absq sq ; inline
 : >=1? ( x -- ? )
     dup complex? [ drop f ] [ 1 >= ] if ; inline
 
+GENERIC: frexp ( x -- y exp )
+
+M: float frexp
+    dup fp-special? [ dup zero? ] unless* [ 0 ] [
+        double>bits
+        [ 0x800f,ffff,ffff,ffff bitand 0.5 double>bits bitor bits>double ]
+        [ -52 shift 0x7ff bitand 1022 - ] bi
+    ] if ; inline
+
+M: integer frexp
+    [ 0.0 0 ] [
+        dup 0 > [ 1 ] [ abs -1 ] if swap dup log2 [
+            52 swap - shift 0x000f,ffff,ffff,ffff bitand
+            0.5 double>bits bitor bits>double
+        ] [ 1 + ] bi [ * ] dip
+    ] if-zero ; inline
+
 GENERIC: log ( x -- y )
 
 M: float log dup 0.0 >= [ flog ] [ 0.0 rect> log ] if ; inline
@@ -162,6 +179,29 @@ M: float log dup 0.0 >= [ flog ] [ 0.0 rect> log ] if ; inline
 M: real log >float log ; inline
 
 M: complex log >polar [ flog ] dip rect> ; inline
+
+<PRIVATE
+
+: most-negative-finite-float ( -- x )
+    -0x1.ffff,ffff,ffff,fp1023 >integer ; inline
+: most-positive-finite-float ( -- x )
+    0x1.ffff,ffff,ffff,fp1023 >integer ; inline
+CONSTANT: log-2   0x1.62e42fefa39efp-1
+CONSTANT: log10-2 0x1.34413509f79ffp-2
+
+: (representable-as-float?) ( x -- ? )
+    most-negative-finite-float
+    most-positive-finite-float between? ; inline
+
+: (bignum-log) ( n log-quot: ( x -- y ) log-2 -- log )
+    [ dup ] dip '[
+        dup (representable-as-float?)
+        [ >float @ ] [ frexp [ @ ] [ _ * ] bi* + ] if
+    ] call ; inline
+
+PRIVATE>
+
+M: bignum log [ log ] log-2 (bignum-log) ;
 
 GENERIC: log1+ ( x -- y )
 
@@ -176,6 +216,8 @@ GENERIC: log10 ( x -- y ) foldable
 M: real log10 >float flog10 ; inline
 
 M: complex log10 log 10 log / ; inline
+
+M: bignum log10 [ log10 ] log10-2 (bignum-log) ;
 
 GENERIC: cos ( x -- y ) foldable
 

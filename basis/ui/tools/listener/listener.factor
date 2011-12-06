@@ -24,6 +24,8 @@ IN: ui.tools.listener
 TUPLE: interactor < source-editor
 output history flag mailbox thread waiting token-model word-model popup ;
 
+INSTANCE: interactor input-stream
+
 : register-self ( interactor -- )
     <mailbox> >>mailbox
     self >>thread
@@ -48,7 +50,7 @@ M: interactor manifest>>
     ] if ;
 
 : vocab-exists? ( name -- ? )
-    '[ _ { [ vocab ] [ find-vocab-root ] } 1|| ] [ drop f ] recover ;
+    '[ _ { [ lookup-vocab ] [ find-vocab-root ] } 1|| ] [ drop f ] recover ;
 
 GENERIC: (word-at-caret) ( token completion-mode -- obj )
 
@@ -150,15 +152,12 @@ M: interactor stream-readln
         3bi
     ] if ;
 
-M: interactor stream-read
-    swap [
-        drop ""
-    ] [
-        [ interactor-read dup [ "\n" join ] when ] dip short head
+M:: interactor stream-read-unsafe ( n buf interactor -- count )
+    n [ 0 ] [
+        drop
+        interactor interactor-read dup [ "\n" join ] when
+        n short [ head-slice 0 buf copy ] keep
     ] if-zero ;
-
-M: interactor stream-read-partial
-    stream-read ;
 
 M: interactor stream-read1
     dup interactor-read {
@@ -318,7 +317,7 @@ M: object accept-completion-hook 2drop ;
 
 : quot-action ( interactor -- lines )
     [ history>> history-add drop ] [ control-value ] [ select-all ] tri
-    [ parse-lines ] with-compilation-unit ;
+    parse-lines-interactive ;
 
 : <debugger-popup> ( error continuation -- popup )
     over compute-restarts [ hide-glass ] <debugger> "Error" <labeled-gadget> ;
@@ -342,7 +341,7 @@ M: object accept-completion-hook 2drop ;
 : handle-interactive ( lines interactor -- quot/f ? )
     [ nip ] [ try-parse ] 2bi {
         { [ dup quotation? ] [ nip t ] }
-        { [ dup not ] [ drop "\n" swap user-input* drop f f ] }
+        { [ dup not ] [ drop insert-newline f f ] }
         [ handle-parse-error f f ]
     } cond ;
 
@@ -394,7 +393,7 @@ interactor "completion" f {
         listener
         nl
         "The listener has exited. To start it again, click “Restart Listener”." print
-    ] with-streams* ;
+    ] with-input-output+error-streams* ;
 
 : start-listener-thread ( listener -- )
     '[
@@ -419,7 +418,7 @@ interactor "completion" f {
 \ com-help H{ { +nullary+ t } } define-command
 
 : com-auto-use ( -- )
-    auto-use? [ not ] change ;
+    auto-use? toggle ;
 
 \ com-auto-use H{ { +nullary+ t } { +listener+ t } } define-command
 

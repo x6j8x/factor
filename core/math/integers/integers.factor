@@ -14,6 +14,7 @@ M: integer denominator drop 1 ; inline
 M: fixnum >fixnum ; inline
 M: fixnum >bignum fixnum>bignum ; inline
 M: fixnum >integer ; inline
+M: fixnum >float fixnum>float ; inline
 
 M: fixnum hashcode* nip ; inline
 M: fixnum equal? over bignum? [ >bignum bignum= ] [ 2drop f ] if ; inline
@@ -36,16 +37,6 @@ M: fixnum + fixnum+ ; inline
 M: fixnum - fixnum- ; inline
 M: fixnum * fixnum* ; inline
 M: fixnum /i fixnum/i ; inline
-
-DEFER: bignum/f
-CONSTANT: bignum/f-threshold HEX: 20,0000,0000,0000
-
-: fixnum/f ( m n -- m/n )
-    [ >float ] bi@ float/f ; inline
-
-M: fixnum /f
-    2dup [ abs bignum/f-threshold >= ] either?
-    [ bignum/f ] [ fixnum/f ] if ; inline
 
 M: fixnum mod fixnum-mod ; inline
 
@@ -119,44 +110,71 @@ M: bignum (log2) bignum-log2 ; inline
 : scale-denonimator ( den -- scaled-den scale' )
     dup twos neg [ shift ] keep ; inline
 
-: pre-scale ( num den -- mantissa den' scale )
+: (epsilon?) ( num shift -- ? )
+    dup neg? [ neg 2^ 1 - bitand zero? not ] [ 2drop f ] if ; inline
+
+: pre-scale ( num den -- epsilon? mantissa den' scale )
     2dup [ log2 ] bi@ -
-    [ neg 54 + shift ] [ [ scale-denonimator ] dip + ] bi-curry bi* ; inline
+    [ neg 54 + [ (epsilon?) ] [ shift ] 2bi ]
+    [ [ scale-denonimator ] dip + ] bi-curry bi* ; inline
 
 ! Second step: loop
-: /f-loop ( mantissa den scale -- fraction-and-guard rem scale' )
+: (2/-with-epsilon) ( epsilon? num -- epsilon?' num' )
+    [ 1 bitand zero? not or ] [ 2/ ] bi ; inline
+
+: /f-loop ( epsilon? mantissa den scale -- epsilon?' fraction-and-guard rem scale' )
     [ 2over /i log2 53 > ]
-    [ [ 2/ ] [ ] [ 1 + ] tri* ] while
+    [ [ (2/-with-epsilon) ] [ ] [ 1 + ] tri* ] while
     [ /mod ] dip ; inline
 
 ! Third step: post-scaling
-: unscaled-float ( mantissa -- n )
-    52 2^ 1 - bitand 1022 52 shift bitor bits>double ; inline
-
 : scale-float ( mantissa scale -- float' )
-    dup 0 < [ neg 2^ recip ] [ 2^ ] if * ; inline
+    {
+        { [ dup 1024 > ] [ 2drop 1/0. ] }
+        { [ dup -1023 < ] [ 1021 + shift bits>double ] }
+        [ [ 52 2^ 1 - bitand ] dip 1022 + 52 shift bitor bits>double ]
+    } cond ; inline
 
 : post-scale ( mantissa scale -- n )
     [ 2/ ] dip over log2 52 > [ [ 2/ ] [ 1 + ] bi* ] when
-    [ unscaled-float ] dip scale-float ; inline
+    scale-float ; inline
+
+: round-to-nearest ( epsilon? fraction-and-guard rem -- fraction-and-guard' )
+    over odd?
+    [
+        zero? [
+            dup 2 bitand zero? not rot or [ 1 + ] when
+        ] [ nip 1 + ] if
+    ] [ drop nip ] if ;
+    inline
 
 ! Main word
 : /f-abs ( m n -- f )
-    over zero? [
-        2drop 0.0
-    ] [
-        [
-            drop 1/0.
-        ] [
+    over zero? [ nip zero? 0/0. 0.0 ? ] [
+        [ drop 1/0. ] [
             pre-scale
             /f-loop
-            [ over odd? [ zero? [ 1 + ] unless ] [ drop ] if ] dip
+            [ round-to-nearest ] dip
             post-scale
         ] if-zero
     ] if ; inline
 
 : bignum/f ( m n -- f )
-    [ [ abs ] bi@ /f-abs ] [ [ 0 < ] bi@ xor ] 2bi [ neg ] when ;
+    [ [ abs ] bi@ /f-abs ] [ [ 0 < ] bi@ xor ] 2bi [ neg ] when ; inline
 
-M: bignum /f ( m n -- f )
-    bignum/f ;
+M: bignum /f ( m n -- f ) { bignum bignum } declare bignum/f ;
+
+CONSTANT: bignum/f-threshold 0x20,0000,0000,0000
+
+: fixnum/f ( m n -- m/n )
+    [ >float ] bi@ float/f ; inline
+
+M: fixnum /f
+    { fixnum fixnum } declare
+    2dup [ abs bignum/f-threshold >= ] either?
+    [ bignum/f ] [ fixnum/f ] if ; inline
+
+: bignum>float ( bignum -- float )
+    { bignum } declare 1 >bignum bignum/f ;
+
+M: bignum >float bignum>float ; inline

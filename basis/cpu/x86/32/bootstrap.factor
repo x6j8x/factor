@@ -1,9 +1,10 @@
-! Copyright (C) 2007, 2010 Slava Pestov.
+! Copyright (C) 2007, 2011 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: bootstrap.image.private kernel kernel.private namespaces
 system cpu.x86.assembler cpu.x86.assembler.operands layouts
-vocabs parser compiler.constants sequences math math.private
-generic.single.private threads.private ;
+vocabs parser compiler.constants compiler.codegen.relocation
+sequences math math.private generic.single.private
+threads.private locals ;
 IN: bootstrap.x86
 
 4 \ cell set
@@ -22,32 +23,34 @@ IN: bootstrap.x86
 : vm-reg ( -- reg ) EBX ;
 : ctx-reg ( -- reg ) EBP ;
 : nv-regs ( -- seq ) { ESI EDI EBX } ;
+: volatile-regs ( -- seq ) { EAX ECX EDX } ;
 : nv-reg ( -- reg ) ESI ;
 : ds-reg ( -- reg ) ESI ;
 : rs-reg ( -- reg ) EDI ;
 : link-reg ( -- reg ) EBX ;
 : fixnum>slot@ ( -- ) temp0 2 SAR ;
 : rex-length ( -- n ) 0 ;
+: red-zone-size ( -- n ) 0 ;
 
 : jit-call ( name -- )
-    0 CALL rc-relative jit-dlsym ;
+    0 CALL f rc-relative rel-dlsym ;
 
 [
-    ! save stack frame size
-    stack-frame-size PUSH
-    ! push entry point
-    0 PUSH rc-absolute-cell rt-this jit-rel
     ! alignment
-    ESP stack-frame-size 3 bootstrap-cells - SUB
+    ESP stack-frame-size bootstrap-cell - SUB
+    ! store entry point
+    ESP stack-frame-size 3 bootstrap-cells - [+] 0 MOV rc-absolute-cell rel-this
+    ! store stack frame size
+    ESP stack-frame-size 2 bootstrap-cells - [+] stack-frame-size MOV
 ] jit-prolog jit-define
 
 [
-    pic-tail-reg 0 MOV rc-absolute-cell rt-here jit-rel
-    0 JMP rc-relative rt-entry-point-pic-tail jit-rel
+    pic-tail-reg 0 MOV 0 rc-absolute-cell rel-here
+    0 JMP f rc-relative rel-word-pic-tail
 ] jit-word-jump jit-define
 
 : jit-load-vm ( -- )
-    vm-reg 0 MOV 0 rc-absolute-cell jit-vm ;
+    vm-reg 0 MOV 0 rc-absolute-cell rel-vm ;
 
 : jit-load-context ( -- )
     ! VM pointer must be in vm-reg already
@@ -65,13 +68,13 @@ IN: bootstrap.x86
     rs-reg ctx-reg context-retainstack-offset [+] MOV ;
 
 [
-    ! ctx-reg is preserved across the call because it is non-volatile
-    ! in the C ABI
+    ! ctx-reg is preserved across the call because it is
+    ! non-volatile in the C ABI
     jit-load-vm
     jit-save-context
     ! call the primitive
     ESP [] vm-reg MOV
-    0 CALL rc-relative rt-dlsym jit-rel
+    0 CALL f f rc-relative rel-dlsym
     jit-restore-context
 ] jit-primitive jit-define
 
@@ -95,6 +98,40 @@ IN: bootstrap.x86
     "end_callback" jit-call
 ] \ c-to-factor define-sub-primitive
 
+! The signal-handler and leaf-signal-handler subprimitives are special-cased
+! in vm/quotations.cpp not to trigger generation of a stack frame, so they can
+! peform their own prolog/epilog preserving registers.
+
+:: jit-signal-handler-prolog ( -- frame-size )
+    stack-frame-size 8 bootstrap-cells + :> frame-size
+    ! minus a cell each for flags and return address
+    ! use LEA so we don't dirty flags
+    ESP ESP frame-size 2 bootstrap-cells - neg [+] LEA
+    ESP []                    EAX MOV
+    ESP 1 bootstrap-cells [+] ECX MOV
+    ESP 2 bootstrap-cells [+] EDX MOV
+    ESP 3 bootstrap-cells [+] EBX MOV
+    ESP 4 bootstrap-cells [+] EBP MOV
+    ESP 5 bootstrap-cells [+] ESI MOV
+    ESP 6 bootstrap-cells [+] EDI MOV
+    PUSHF
+    ESP frame-size 3 bootstrap-cells - [+] 0 MOV rc-absolute-cell rel-this
+    ESP frame-size 2 bootstrap-cells - [+] frame-size MOV
+    ! subprimitive definition assumes vm's been loaded
+    jit-load-vm
+    frame-size ;
+
+:: jit-signal-handler-epilog ( frame-size -- )
+    POPF
+    EAX ESP []                    MOV
+    ECX ESP 1 bootstrap-cells [+] MOV
+    EDX ESP 2 bootstrap-cells [+] MOV
+    EBX ESP 3 bootstrap-cells [+] MOV
+    EBP ESP 4 bootstrap-cells [+] MOV
+    ESI ESP 5 bootstrap-cells [+] MOV
+    EDI ESP 6 bootstrap-cells [+] MOV
+    ESP ESP frame-size 2 bootstrap-cells - [+] LEA ;
+
 [
     EAX ds-reg [] MOV
     ds-reg bootstrap-cell SUB
@@ -108,6 +145,9 @@ IN: bootstrap.x86
     jit-load-vm
     jit-load-context
     jit-restore-context
+
+    ! clear the fault flag
+    vm-reg vm-fault-flag-offset [+] 0 MOV
 
     ! Windows-specific setup
     ctx-reg jit-update-seh
@@ -177,7 +217,7 @@ IN: bootstrap.x86
 \ lazy-jit-compile define-combinator-primitive
 
 [
-    temp1 HEX: ffffffff CMP rc-absolute-cell rt-literal jit-rel
+    temp1 0xffffffff CMP f rc-absolute-cell rel-literal
 ] pic-check-tuple jit-define
 
 ! Inline cache miss entry points
@@ -191,7 +231,7 @@ IN: bootstrap.x86
     jit-save-context
     ESP 4 [+] vm-reg MOV
     ESP [] pic-tail-reg MOV
-    "inline_cache_miss" jit-call
+    0 CALL rc-relative rel-inline-cache-miss
     jit-restore-context ;
 
 [ jit-load-return-address jit-inline-cache-miss ]
@@ -357,6 +397,10 @@ IN: bootstrap.x86
 
     EAX EDX [] MOV
     jit-jump-quot ;
+
+[
+    0 EAX MOVABS rc-absolute rel-safepoint
+] \ jit-safepoint jit-define
 
 [
     jit-start-context-and-delete

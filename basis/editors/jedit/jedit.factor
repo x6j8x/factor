@@ -1,41 +1,34 @@
-! Copyright (C) 2004, 2008 Slava Pestov.
+! Copyright (C) 2004, 2010 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: arrays definitions io kernel math
-namespaces parser prettyprint sequences strings words
-editors io.files io.sockets io.streams.byte-array io.binary
-math.parser io.encodings.ascii io.encodings.binary
-io.encodings.utf8 io.files.private io.pathnames ;
+USING: combinators.short-circuit editors io.pathnames
+io.standard-paths kernel make math.parser namespaces sequences
+system ;
 IN: editors.jedit
 
-: jedit-server-info ( -- port auth )
-    home ".jedit/server" append-path ascii [
-        readln drop
-        readln string>number
-        readln string>number
-    ] with-file-reader ;
+SINGLETON: jedit
+jedit editor-class set-global
 
-: make-jedit-request ( files -- code )
-    utf8 [
-        "EditServer.handleClient(false,false,false," write
-        cwd pprint
-        "," write
-        "new String[] {" write
-        [ pprint "," write ] each
-        "null});\n" write
-    ] with-byte-writer ;
+ERROR: jedit-not-found ;
 
-: send-jedit-request ( request -- )
-    jedit-server-info "localhost" rot <inet> binary [
-        4 >be write
-        dup length 2 >be write
-        write
-    ] with-client ;
+HOOK: find-jedit-path os ( -- path )
 
-: jedit-location ( file line -- )
-    number>string "+line:" prepend 2array
-    make-jedit-request send-jedit-request ;
+M: object find-jedit-path "jedit" ;
 
-: jedit-file ( file -- )
-    1array make-jedit-request send-jedit-request ;
+M: macosx find-jedit-path
+    "org.gjt.sp.jedit" find-native-bundle
+    dup [ "Contents/MacOS/jedit" append-path ] when ;
 
-[ jedit-location ] edit-hook set-global
+M: windows find-jedit-path
+    { "jedit" } "jedit.exe" find-in-applications ;
+    
+: jedit-path ( -- path )
+    \ jedit-path get-global [
+        find-jedit-path "jedit" or
+    ] unless* ;
+
+M: jedit editor-command ( file line -- command/f )
+    [
+        find-jedit-path ,
+        "-reuseview" ,
+        [ , ] [ number>string "+line:" prepend , ] bi*
+    ] { } make ;

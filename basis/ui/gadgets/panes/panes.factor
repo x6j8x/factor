@@ -19,6 +19,7 @@ output current input last-line prototype scrolls?
 selection-color caret mark selecting? ;
 
 TUPLE: pane-stream pane ;
+INSTANCE: pane-stream output-stream
 
 C: <pane-stream> pane-stream
 
@@ -142,6 +143,9 @@ PRIVATE>
 : <pane> ( -- pane ) f pane new-pane ;
 
 GENERIC: write-gadget ( gadget stream -- )
+
+M: filter-writer write-gadget
+    stream>> write-gadget ;
 
 M: pane-stream write-gadget ( gadget pane-stream -- )
     pane>> current>> swap add-gadget drop ;
@@ -420,7 +424,7 @@ pane H{
     { T{ button-down f { S+ } 1 } [ select-to-caret ] }
     { T{ button-up f { S+ } 1 } [ end-selection ] }
     { T{ button-up } [ end-selection ] }
-    { T{ drag } [ extend-selection ] }
+    { T{ drag { # 1 } } [ extend-selection ] }
     { copy-action [ com-copy ] }
     { T{ button-down f f 3 } [ pane-menu ] }
 } set-gestures

@@ -14,7 +14,7 @@ TUPLE: gdbm
     { role initial: wrcreat }
     { sync boolean }
     { nolock boolean }
-    { mode integer initial: OCT: 644 } ;
+    { mode integer initial: 0o644 } ;
 
 : <gdbm> ( -- gdbm ) gdbm new ;
 
@@ -76,7 +76,8 @@ DESTRUCTOR: gdbm-close
 
 : gdbm-store ( key content flag -- )
     [
-        { [ dbf ] [ object>datum ] [ object>datum ] [ ] } spread
+        [ dbf ] 3dip
+        [ object>datum ] [ object>datum ] [ ] tri*
         gdbm_store check-error
     ] with-destructors ;
 

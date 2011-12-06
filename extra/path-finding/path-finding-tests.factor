@@ -120,3 +120,31 @@ MEMO: routes ( -- hash ) $[ { "ABD" "BC" "C" "DCE" "ECF" } [ unclip swap 2array 
 
 [ f ] [ "FA" first2 routes <bfs> find-path ] unit-test
 [ "DC" ] [ "DC" first2 routes <bfs> find-path >string ] unit-test
+
+<<
+
+! Build the costs as expected by the dijkstra word.
+
+MEMO: costs ( -- costs )
+    routes keys [ dup dup n [ dup [ c ] dip swap 2array ] with { } map-as >hashtable 2array ] map >hashtable ;
+
+: test3 ( fromto -- path considered )
+    first2 costs <dijkstra> [ find-path ] [ considered natural-sort >string ] bi ;
+
+>>
+
+! Check path from A to C -- all nodes but F must have been examined
+[ "ADC" "ABCDE" ] [ "AC" test3 [ >string ] dip ] unit-test
+
+! No path from D to B -- all nodes reachable from D must have been examined
+[ f "CDEF" ] [ "DB" test3 ] unit-test
+
+[ { 1 3 } ] [
+    1 3 H{
+        { 1 H{ { 2 0 } { 3 0 } } }
+        { 2 H{ { 3 0 } { 1 0 } { 4 0 } } }
+        { 3 H{ { 4 0 } } }
+        { 4 H{ } }
+    } <dijkstra> find-path
+] unit-test
+

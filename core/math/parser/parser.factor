@@ -1,7 +1,7 @@
 ! (c)2009 Joe Groff bsd license
 USING: accessors byte-arrays combinators kernel kernel.private
-math namespaces sequences sequences.private splitting strings
-make ;
+make math namespaces sequences sequences.private splitting
+strings ;
 IN: math.parser
 
 : digit> ( ch -- n )
@@ -74,12 +74,21 @@ TUPLE: float-parse
     [ nip swap /f ]
     [ drop 2.0 swap exponent>> (pow) * ] 2tri ; inline
 
+: ?default-exponent ( float-parse n/f -- float-parse' n/f' )
+    over exponent>> [
+        over radix>> 10 =
+        [ [ [ radix>> ] [ point>> ] bi 0 float-parse boa ] dip ]
+        [ drop f ] if
+    ] unless ; inline
+
 : ?make-float ( float-parse n/f -- float/f )
+    { float-parse object } declare
+    ?default-exponent
     {
         { [ dup not ] [ 2drop f ] }
         { [ over radix>> 10 = ] [ make-float-dec-exponent ] }
         [ make-float-bin-exponent ]
-    } cond ; inline
+    } cond ;
 
 : ?neg ( n/f -- -n/f )
     [ neg ] [ f ] if* ; inline
@@ -97,7 +106,7 @@ TUPLE: float-parse
     -rot [ str>> ] [ length>> ] bi 10 number-parse boa 0 ; inline
 
 : <float-parse> ( i number-parse n -- float-parse i number-parse n )
-     [ drop nip radix>> 0 0 float-parse boa ] 3keep ; inline
+     [ drop nip radix>> 0 f float-parse boa ] 3keep ; inline
 
 DEFER: @exponent-digit
 DEFER: @mantissa-digit
@@ -176,7 +185,8 @@ DEFER: @neg-digit
     } case ; inline
 
 : ->denominator ( i number-parse n -- n/f )
-    @split [ @denom-first-digit ] require-next-digit ?make-ratio ; inline
+    { fixnum number-parse integer } declare
+    @split [ @denom-first-digit ] require-next-digit ?make-ratio ;
 
 : @num-digit-or-punc ( i number-parse n char -- n/f )
     {
@@ -190,7 +200,8 @@ DEFER: @neg-digit
     digit-in-radix [ [ @num-digit-or-punc ] add-digit ] [ @abort ] if ;
 
 : ->numerator ( i number-parse n -- n/f )
-    @split [ @num-digit ] require-next-digit ?add-ratio ; inline
+    { fixnum number-parse integer } declare
+    @split [ @num-digit ] require-next-digit ?add-ratio ;
 
 : @pos-digit-or-punc ( i number-parse n char -- n/f )
     {
@@ -205,9 +216,27 @@ DEFER: @neg-digit
     { fixnum number-parse integer fixnum } declare
     digit-in-radix [ [ @pos-digit-or-punc ] add-digit ] [ @abort ] if ;
 
+: (->radix) ( number-parse radix -- number-parse' )
+    [ [ str>> ] [ length>> ] bi ] dip number-parse boa ; inline
+
+: ->radix ( i number-parse n quot radix -- i number-parse n quot )
+    [ (->radix) ] curry 2dip ; inline
+
+: with-radix-char ( i number-parse n radix-quot nonradix-quot -- n/f )
+    [
+        rot {
+            { CHAR: b [ drop  2 ->radix require-next-digit ] }
+            { CHAR: o [ drop  8 ->radix require-next-digit ] }
+            { CHAR: x [ drop 16 ->radix require-next-digit ] }
+            { f       [ 3drop 2drop 0 ] }
+            [ [ drop ] 2dip swap call ]
+        } case
+    ] 2curry next-digit ; inline
+
 : @pos-first-digit ( i number-parse n char -- n/f )
     {
         { CHAR: . [ ->required-mantissa ] }
+        { CHAR: 0 [ [ @pos-digit ] [ @pos-digit-or-punc ] with-radix-char ] }
         [ @pos-digit ]
     } case ; inline
 
@@ -227,6 +256,7 @@ DEFER: @neg-digit
 : @neg-first-digit ( i number-parse n char -- n/f )
     {
         { CHAR: . [ ->required-mantissa ] }
+        { CHAR: 0 [ [ @neg-digit ] [ @neg-digit-or-punc ] with-radix-char ] }
         [ @neg-digit ]
     } case ; inline
 
@@ -278,6 +308,11 @@ PRIVATE>
 PRIVATE>
 
 GENERIC# >base 1 ( n radix -- str )
+
+: number>string ( n -- str ) 10 >base ; inline
+: >bin ( n -- str ) 2 >base ; inline
+: >oct ( n -- str ) 8 >base ; inline
+: >hex ( n -- str ) 16 >base ; inline
 
 <PRIVATE
 
@@ -345,8 +380,8 @@ M: ratio >base
     -0.0 double>bits bitand zero? "" "-" ? ;
 
 : float>hex-value ( mantissa -- str )
-    16 >base 13 CHAR: 0 pad-head [ CHAR: 0 = ] trim-tail
-    [ "0" ] [ ] if-empty "1." prepend ;
+    >hex 13 CHAR: 0 pad-head [ CHAR: 0 = ] trim-tail
+    [ "0" ] when-empty "1." prepend ;
 
 : float>hex-expt ( mantissa -- str )
     10 >base "p" prepend ;
@@ -382,10 +417,5 @@ M: float >base
         { [ over -0.0 fp-bitwise= ] [ 2drop "-0.0" ] }
         [ float>base ]
     } cond ;
-
-: number>string ( n -- str ) 10 >base ; inline
-: >bin ( n -- str ) 2 >base ; inline
-: >oct ( n -- str ) 8 >base ; inline
-: >hex ( n -- str ) 16 >base ; inline
 
 : # ( n -- ) number>string % ; inline

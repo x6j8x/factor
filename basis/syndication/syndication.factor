@@ -5,13 +5,13 @@ USING: xml.traversal kernel assocs math.order strings sequences
 xml.data xml.writer io.streams.string combinators xml
 xml.entities.html io.files io http.client namespaces make
 xml.syntax hashtables calendar.format accessors continuations
-urls present byte-arrays ;
+urls present byte-arrays fry arrays ;
 IN: syndication
 
 : any-tag-named ( tag names -- tag-inside )
     [ f ] 2dip [ tag-named nip dup ] with find 2drop ;
 
-TUPLE: feed title url entries ;
+TUPLE: feed title url entries hubs ;
 
 : <feed> ( -- feed ) feed new ;
 
@@ -28,8 +28,7 @@ TUPLE: entry title url description date ;
     [ rfc822>timestamp ] [ drop rfc3339>timestamp ] recover ;
 
 : rss1.0-entry ( tag -- entry )
-    entry new
-    swap {
+    <entry> swap {
         [ "title" tag-named children>string >>title ]
         [ "link" tag-named children>string >url >>url ]
         [ "description" tag-named children>string >>description ]
@@ -41,16 +40,14 @@ TUPLE: entry title url description date ;
     } cleave ;
 
 : rss1.0 ( xml -- feed )
-    feed new
-    swap [
+    <feed> swap [
         "channel" tag-named
         [ "title" tag-named children>string >>title ]
         [ "link" tag-named children>string >url >>url ] bi
     ] [ "item" tags-named [ rss1.0-entry ] map set-entries ] bi ;
 
 : rss2.0-entry ( tag -- entry )
-    entry new
-    swap {
+    <entry> swap {
         [ "title" tag-named children>string >>title ]
         [ { "link" "guid" } any-tag-named children>string >url >>url ]
         [ { "description" "encoded" } any-tag-named children>string >>description ]
@@ -61,24 +58,26 @@ TUPLE: entry title url description date ;
     } cleave ;
 
 : rss2.0 ( xml -- feed )
-    feed new
-    swap
-    "channel" tag-named 
+    <feed> swap
+    "channel" tag-named
     [ "title" tag-named children>string >>title ]
     [ "link" tag-named children>string >url >>url ]
     [ "item" tags-named [ rss2.0-entry ] map set-entries ]
     tri ;
 
-: atom-entry-link ( tag -- url/f )
-    "link" tags-named
-    [ "rel" attr { f "alternate" } member? ] find nip
-    dup [ "href" attr >url ] when ;
+: atom-links ( tag rel -- seq )
+    [ "links" tags-named ] dip
+    dup "alternate" = [ f 2array ] [ 1array ] if
+    '[ "rel" attr _ member? ] filter
+    [ "href" attr >url ] map ;
+
+: atom-link ( tag rel -- url/f )
+    atom-links [ f ] [ first ] if-empty ;
 
 : atom1.0-entry ( tag -- entry )
-    entry new
-    swap {
+    <entry> swap {
         [ "title" tag-named children>string >>title ]
-        [ atom-entry-link >>url ]
+        [ "alternate" atom-link >>url ]
         [
             { "content" "summary" } any-tag-named
             dup children>> [ string? not ] any?
@@ -93,12 +92,12 @@ TUPLE: entry title url description date ;
     } cleave ;
 
 : atom1.0 ( xml -- feed )
-    feed new
-    swap
-    [ "title" tag-named children>string >>title ]
-    [ "link" tag-named "href" attr >url >>url ]
-    [ "entry" tags-named [ atom1.0-entry ] map set-entries ]
-    tri ;
+    <feed> swap {
+        [ "title" tag-named children>string >>title ]
+        [ "alternate" atom-link >>url ]
+        [ "hub" atom-links >>hubs ]
+        [ "entry" tags-named [ atom1.0-entry ] map set-entries ]
+    } cleave ;
 
 : xml>feed ( xml -- feed )
     dup main>> {
@@ -135,14 +134,21 @@ M: byte-array parse-feed [ bytes>xml xml>feed ] with-html-entities ;
         </entry>
     XML] ;
 
+: hub>xml ( hub -- xml )
+    present [XML <link rel="hub" href=<-> /> XML] ;
+
 : feed>xml ( feed -- xml )
-    [ title>> ]
-    [ url>> present ]
-    [ entries>> [ entry>xml ] map ] tri
+    {
+        [ title>> ]
+        [ url>> present ]
+        [ hubs>> [ hub>xml ] map ]
+        [ entries>> [ entry>xml ] map ]
+    } cleave
     <XML
         <feed xmlns="http://www.w3.org/2005/Atom">
             <title><-></title>
             <link href=<-> />
+            <->
             <->
         </feed>
     XML> ;

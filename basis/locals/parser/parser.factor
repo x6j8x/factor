@@ -64,25 +64,31 @@ M: lambda-parser parse-quotation ( -- quotation )
     H{ } clone (parse-lambda) <let> ?rewrite-closures ;
 
 : parse-locals ( -- effect vars assoc )
-    complete-effect
+    scan-effect
     dup
     in>> [ dup pair? [ first ] when ] map make-locals ;
 
-: parse-locals-definition ( word reader -- word quot effect )
-    [ parse-locals ] dip
+: (parse-locals-definition) ( effect vars assoc reader -- word quot effect )
     ((parse-lambda)) <lambda>
     [ nip "lambda" set-word-prop ]
     [ nip rewrite-closures dup length 1 = [ first ] [ bad-rewrite ] if ]
     [ drop nip ] 3tri ; inline
 
+: parse-locals-definition ( word reader -- word quot effect )
+    [ parse-locals ] dip (parse-locals-definition) ; inline
+
+: parse-locals-method-definition ( word reader -- word quot effect )
+    [ parse-locals pick check-method-effect ] dip
+    (parse-locals-definition) ; inline
+
 : (::) ( -- word def effect )
-    CREATE-WORD
+    scan-new-word
     [ parse-definition ]
     parse-locals-definition ;
 
 : (M::) ( -- word def )
-    CREATE-METHOD
+    scan-new-method
     [
-        [ parse-definition ] 
-        parse-locals-definition drop
+        [ parse-definition ]
+        parse-locals-method-definition drop
     ] with-method-definition ;

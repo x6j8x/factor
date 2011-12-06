@@ -1,6 +1,6 @@
 ! Copyright (C) 2003, 2009 Slava Pestov, Joe Groff.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: kernel math.private ;
+USING: kernel ;
 IN: math
 
 GENERIC: >fixnum ( x -- n ) foldable
@@ -59,11 +59,7 @@ PRIVATE>
 ERROR: log2-expects-positive x ;
 
 : log2 ( x -- n )
-    dup 0 <= [
-        log2-expects-positive
-    ] [
-        (log2)
-    ] if ; inline
+    dup 0 <= [ log2-expects-positive ] [ (log2) ] if ; inline
 
 : zero? ( x -- ? ) 0 number= ; inline
 : 2/ ( x -- y ) -1 shift ; inline
@@ -74,21 +70,25 @@ ERROR: log2-expects-positive x ;
 : ?1+ ( x -- y ) [ 1 + ] [ 0 ] if* ; inline
 : rem ( x y -- z ) abs [ mod ] [ + ] [ mod ] tri ; foldable
 : 2^ ( n -- 2^n ) 1 swap shift ; inline
-: even? ( n -- ? ) 1 bitand zero? ;
-: odd? ( n -- ? ) 1 bitand 1 number= ;
+: even? ( n -- ? ) 1 bitand zero? ; inline
+: odd? ( n -- ? ) 1 bitand 1 number= ; inline
+
+GENERIC: neg? ( x -- -x )
 
 : if-zero ( ..a n quot1: ( ..a -- ..b ) quot2: ( ..a n -- ..b ) -- ..b )
     [ dup zero? ] [ [ drop ] prepose ] [ ] tri* if ; inline
 
-: when-zero ( n quot -- ) [ ] if-zero ; inline
+: when-zero ( ..a n quot: ( ..a -- ..b ) -- ..b ) [ ] if-zero ; inline
 
-: unless-zero ( n quot -- ) [ ] swap if-zero ; inline
+: unless-zero ( ..a n quot: ( ..a -- ..b ) -- ..b ) [ ] swap if-zero ; inline
 
 UNION: integer fixnum bignum ;
 
 TUPLE: ratio { numerator integer read-only } { denominator integer read-only } ;
 
 UNION: rational integer ratio ;
+
+M: rational neg? 0 < ; inline
 
 UNION: real rational float ;
 
@@ -113,7 +113,7 @@ M: object fp-snan? drop f ; inline
 M: object fp-infinity? drop f ; inline
 
 : <fp-nan> ( payload -- nan )
-    HEX: 7ff0000000000000 bitor bits>double ; inline
+    0x7ff0000000000000 bitor bits>double ; inline
 
 GENERIC: next-float ( m -- n )
 GENERIC: prev-float ( m -- n )

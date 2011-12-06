@@ -22,10 +22,9 @@ HELP: every
      { "timer" timer } }
 { $description "Creates a timer that calls the quotation repeatedly, using " { $snippet "duration" } " as the frequency. The first call of " { $snippet "quot" } " will happen immediately. If the quotation throws an exception, the timer will stop." }
 { $examples
-    { $unchecked-example
+    { $code
         "USING: timers io calendar ;"
         """[ "Hi Buddy." print flush ] 10 seconds every drop"""
-        ""
     }
 } ;
 
@@ -33,10 +32,9 @@ HELP: later
 { $values { "quot" quotation } { "delay-duration" duration } { "timer" timer } }
 { $description "Sleeps for " { $snippet "duration" } " and then calls a " { $snippet "quot" } ". The user may cancel the timer before " { $snippet "quot" } " runs. This timer is not repeated." }
 { $examples
-    { $unchecked-example
+    { $code
         "USING: timers io calendar ;"
         """[ "Break's over!" print flush ] 15 minutes later drop"""
-        ""
     }
 } ;
 
@@ -46,15 +44,14 @@ HELP: delayed-every
      { "timer" timer } }
 { $description "Creates a timer that calls " { $snippet "quot" } " repeatedly, waiting " { $snippet "duration" } " before calling " { $snippet "quot" } " the first time and then waiting " { $snippet "duration" } " between further calls. If the quotation throws an exception, the timer will stop." }
 { $examples
-    { $unchecked-example
+    { $code
         "USING: timers io calendar ;"
         """[ "Hi Buddy." print flush ] 10 seconds every drop"""
-        ""
     }
 } ;
 
-ARTICLE: "timers" "Alarms"
-"The " { $vocab-link "timers" } " vocabulary provides a lightweight way to schedule one-time and recurring tasks. Alarms run in a single green thread per timer and consist of a quotation, a delay duration, and an interval duration. After starting a timer, the timer thread sleeps for the delay duration and calls the quotation. Then it waits out the interval duration and calls the quotation again until something stops the timer. If a recurring timer's quotation would be scheduled to run again before the previous quotation has finished processing, the timer will be run again immediately afterwards. This may result in the timer falling behind indefinitely, in which case the it will run as often as possible while still allowing other green threads to run. Recurring timers that execute 'on time' or 'catch up' will always be scheduled for an exact multiple of the interval from the original starting time to prevent the timer from drifting over time. Alarms use " { $link nano-count } " as the timing primitive, so they will continue to work across system clock changes." $nl
+ARTICLE: "timers" "Timers"
+"The " { $vocab-link "timers" } " vocabulary provides a lightweight way to schedule one-time and recurring tasks. Timers run in a single green thread per timer and consist of a quotation, a delay duration, and an interval duration. After starting a timer, the timer thread sleeps for the delay duration and calls the quotation. Then it waits out the interval duration and calls the quotation again until something stops the timer. If a recurring timer's quotation would be scheduled to run again before the previous quotation has finished processing, the timer will be run again immediately afterwards. This may result in the timer falling behind indefinitely, in which case the it will run as often as possible while still allowing other green threads to run. Recurring timers that execute 'on time' or 'catch up' will always be scheduled for an exact multiple of the interval from the original starting time to prevent the timer from drifting over time. Timers use " { $link nano-count } " as the timing primitive, so they will continue to work across system clock changes." $nl
 "The timer class:"
 { $subsections timer }
 "Create a timer before starting it:"

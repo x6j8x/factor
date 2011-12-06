@@ -13,23 +13,11 @@ TUPLE: c-stream < disposable handle ;
 
 M: c-stream dispose* handle>> fclose ;
 
-M: c-stream stream-tell handle>> ftell ;
-
-M: c-stream stream-seek
-    [
-        {
-            { seek-absolute [ 0 ] }
-            { seek-relative [ 1 ] }
-            { seek-end [ 2 ] }
-            [ bad-seek-type ]
-        } case
-    ] [ handle>> ] bi* fseek ;
-
 TUPLE: c-writer < c-stream ;
+INSTANCE: c-writer output-stream
+INSTANCE: c-writer file-writer
 
 : <c-writer> ( handle -- stream ) c-writer new-c-stream ;
-
-M: c-writer stream-element-type drop +byte+ ;
 
 M: c-writer stream-write1 dup check-disposed handle>> fputc ;
 
@@ -40,14 +28,12 @@ M: c-writer stream-write
 M: c-writer stream-flush dup check-disposed handle>> fflush ;
 
 TUPLE: c-reader < c-stream ;
+INSTANCE: c-reader input-stream
+INSTANCE: c-reader file-reader
 
 : <c-reader> ( handle -- stream ) c-reader new-c-stream ;
 
-M: c-reader stream-element-type drop +byte+ ;
-
-M: c-reader stream-read dup check-disposed handle>> fread ;
-
-M: c-reader stream-read-partial stream-read ;
+M: c-reader stream-read-unsafe dup check-disposed handle>> fread-unsafe ;
 
 M: c-reader stream-read1 dup check-disposed handle>> fgetc ;
 
@@ -65,9 +51,9 @@ M: c-reader stream-read-until
 
 M: c-io-backend init-io ;
 
-: stdin-handle ( -- alien ) 11 special-object ;
-: stdout-handle ( -- alien ) 12 special-object ;
-: stderr-handle ( -- alien ) 61 special-object ;
+: stdin-handle ( -- alien ) OBJ-STDIN special-object ;
+: stdout-handle ( -- alien ) OBJ-STDOUT special-object ;
+: stderr-handle ( -- alien ) OBJ-STDERR special-object ;
 
 : init-c-stdio ( -- )
     stdin-handle <c-reader>

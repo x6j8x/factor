@@ -17,8 +17,24 @@ M: windows touch-file ( path -- )
 M: windows move-file ( from to -- )
     [ normalize-path ] bi@ MoveFile win32-error=0/f ;
 
+ERROR: file-delete-failed path error ;
+
+: delete-file-throws ( path -- )
+    DeleteFile win32-error=0/f ;
+
+: delete-read-only-file ( path -- )
+    [ set-file-normal-attribute ] [ delete-file-throws ] bi ;
+
+: (delete-file) ( path -- )
+    dup DeleteFile 0 = [
+        GetLastError ERROR_ACCESS_DENIED =
+        [ delete-read-only-file ] [ throw-win32-error ] if
+    ] [ drop ] if ;
+
 M: windows delete-file ( path -- )
-    normalize-path DeleteFile win32-error=0/f ;
+    absolute-path
+    [ (delete-file) ]
+    [ \ file-delete-failed boa rethrow ] recover ;
 
 M: windows copy-file ( from to -- )
     dup parent-directory make-directories

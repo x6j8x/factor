@@ -1,7 +1,7 @@
 ! Copyright (C) 2007, 2010 Daniel Ehrenberg, Slava Pestov
 ! See http://factorcode.org/license.txt for BSD license.
-USING: kernel sequences arrays math sequences.private vectors
-accessors ;
+USING: accessors arrays kernel math sequences sequences.private
+vectors ;
 IN: assocs
 
 MIXIN: assoc
@@ -58,10 +58,10 @@ PRIVATE>
     (assoc-each) each ; inline
 
 : assoc>map ( ... assoc quot: ( ... key value -- ... elt ) exemplar -- ... seq )
-    [ collector-for [ assoc-each ] dip ] [ like ] bi ; inline
+    [ >alist ] 2dip [ [ first2 ] prepose ] dip map-as ; inline
 
 : assoc-map-as ( ... assoc quot: ( ... key value -- ... newkey newvalue ) exemplar -- ... newassoc )
-    [ [ 2array ] compose V{ } assoc>map ] dip assoc-like ; inline
+    [ [ 2array ] compose { } assoc>map ] dip assoc-like ; inline
 
 : assoc-map ( ... assoc quot: ( ... key value -- ... newkey newvalue ) -- ... newassoc )
     over assoc-map-as ; inline
@@ -117,7 +117,7 @@ M: assoc assoc-clone-like ( assoc exemplar -- newassoc )
     [ at* [ = ] [ 2drop f ] if ] with-assoc assoc-all? ;
 
 : assoc= ( assoc1 assoc2 -- ? )
-    [ assoc-subset? ] [ swap assoc-subset? ] 2bi and ;
+    2dup [ assoc-size ] bi@ eq? [ assoc-subset? ] [ 2drop f ] if ;
 
 : assoc-hashcode ( n assoc -- code )
     >alist hashcode* ;

@@ -43,12 +43,12 @@ IN: cocoa.subclassing
 : prepare-method ( ret types quot -- type imp )
     [ [ encode-types ] 2keep ] dip
     '[ _ _ cdecl _ alien-callback ]
-    (( -- callback )) define-temp ;
+    ( -- callback ) define-temp ;
 
 : prepare-methods ( methods -- methods )
     [
         [ first4 prepare-method 3array ] map
-    ] with-compilation-unit ;
+    ] with-nested-compilation-unit ;
 
 :: (redefine-objc-method) ( class method -- )
     method init-method :> ( sel imp types )

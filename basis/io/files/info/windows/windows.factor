@@ -1,7 +1,7 @@
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: byte-arrays math io.backend io.files.info
-io.files.windows io.files.windows.nt kernel windows.kernel32
+io.files.windows kernel windows.kernel32
 windows.time windows.types windows accessors alien.c-types
 combinators generalizations system alien.strings
 io.encodings.utf16n sequences splitting windows.errors fry
@@ -141,7 +141,7 @@ ERROR: not-absolute-path ;
 
 PRIVATE>
 
-M: winnt file-system-info ( path -- file-system-info )
+M: windows file-system-info ( path -- file-system-info )
     normalize-path root-directory (file-system-info) ;
 
 CONSTANT: names-buf-length 16384
@@ -174,7 +174,7 @@ CONSTANT: names-buf-length 16384
         ]
     ] [ '[ _ FindVolumeClose win32-error=0/f ] ] bi [ ] cleanup ;
 
-M: winnt file-systems ( -- array )
+M: windows file-systems ( -- array )
     find-volumes [ volume>paths ] map
     concat [
         [ (file-system-info) ]

@@ -8,10 +8,11 @@ IN: tools.deploy
     dup find-vocab-root [ deploy* ] [ no-vocab ] if ;
 
 : deploy-image-only ( vocab image -- ) 
-    [ vm ] 2dip swap dup deploy-config make-deploy-image drop ;
+    [ vm ] 2dip
+    swap dup deploy-config make-deploy-image drop ;
 
 {
     { [ os macosx? ] [ "tools.deploy.macosx" ] }
-    { [ os winnt? ] [ "tools.deploy.windows" ] }
+    { [ os windows? ] [ "tools.deploy.windows" ] }
     { [ os unix? ] [ "tools.deploy.unix" ] }
 } cond require

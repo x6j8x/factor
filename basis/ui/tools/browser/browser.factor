@@ -79,7 +79,7 @@ M: browser-gadget handle-gesture
     {
         [ key? ]
         [ [ dup word-link? [ name>> ] when ] dip key? ]
-        [ [ dup vocab-link? [ vocab ] when ] dip key? ]
+        [ [ dup vocab-link? [ lookup-vocab ] when ] dip key? ]
     } 2|| ;
 
 M: browser-gadget definitions-changed ( assoc browser -- )
@@ -97,7 +97,7 @@ M: browser-gadget focusable-child* search-field>> ;
 : error-help-window ( error -- )
     {
         [ error-help ]
-        [ dup tuple? [ class ] [ drop "errors" ] if ]
+        [ dup tuple? [ class-of ] [ drop "errors" ] if ]
     } 1|| (browser-window) ;
 
 \ browser-window H{ { +nullary+ t } } define-command

@@ -1,12 +1,13 @@
-USING: accessors alien alien.c-types alien.strings arrays assocs
-byte-arrays combinators combinators.short-circuit continuations
-game.input game.input.dinput.keys-array io.encodings.utf16
-io.encodings.utf16n kernel locals math math.bitwise
-math.rectangles namespaces parser sequences shuffle
+USING: accessors alien alien.c-types alien.data alien.strings
+arrays assocs byte-arrays combinators combinators.short-circuit
+continuations game.input game.input.dinput.keys-array
+io.encodings.utf16 io.encodings.utf16n kernel locals math
+math.bitwise math.rectangles namespaces parser sequences shuffle
 specialized-arrays ui.backend.windows vectors windows.com
 windows.directx.dinput windows.directx.dinput.constants
 windows.kernel32 windows.messages windows.ole32 windows.errors
-windows.user32 classes.struct alien.data ;
+windows.user32 classes.struct ;
+FROM: namespaces => change-global ;
 SPECIALIZED-ARRAY: DIDEVICEOBJECTDATA
 IN: game.input.dinput
 
@@ -23,15 +24,15 @@ SYMBOLS: +dinput+ +keyboard-device+ +keyboard-state+
 
 : create-dinput ( -- )
     f GetModuleHandle DIRECTINPUT_VERSION IDirectInput8W-iid
-    f <void*> [ f DirectInput8Create ole32-error ] keep *void*
+    f void* <ref> [ f DirectInput8Create ole32-error ] keep void* deref
     +dinput+ set-global ;
 
 : delete-dinput ( -- )
     +dinput+ [ com-release f ] change-global ;
 
 : device-for-guid ( guid -- device )
-    +dinput+ get-global swap f <void*>
-    [ f IDirectInput8W::CreateDevice ole32-error ] keep *void* ;
+    +dinput+ get-global swap f void* <ref>
+    [ f IDirectInput8W::CreateDevice ole32-error ] keep void* deref ;
 
 : set-coop-level ( device -- )
     +device-change-window+ get-global DISCL_BACKGROUND DISCL_NONEXCLUSIVE bitor
@@ -74,7 +75,7 @@ SYMBOLS: +dinput+ +keyboard-device+ +keyboard-state+
     GUID_SysMouse device-for-guid
     [ configure-mouse ] [ +mouse-device+ set-global ] bi
     0 0 0 0 8 f <array> mouse-state boa +mouse-state+ set-global
-    MOUSE-BUFFER-SIZE <DIDEVICEOBJECTDATA-array> +mouse-buffer+ set-global ;
+    MOUSE-BUFFER-SIZE DIDEVICEOBJECTDATA <c-array> +mouse-buffer+ set-global ;
 
 : device-info ( device -- DIDEVICEIMAGEINFOW )
     DIDEVICEINSTANCEW <struct>
@@ -244,13 +245,13 @@ M: dinput-game-input-backend (close-game-input)
     delete-dinput ;
 
 M: dinput-game-input-backend (reset-game-input)
-    global [
+    [
         {
             +dinput+ +keyboard-device+ +keyboard-state+
             +controller-devices+ +controller-guids+
             +device-change-window+ +device-change-handle+
         } [ off ] each
-    ] bind ;
+    ] with-global ;
 
 M: dinput-game-input-backend get-controllers
     +controller-devices+ get-global
@@ -282,7 +283,7 @@ CONSTANT: pov-values
 : >slider ( long -- float )
     65535.0 /f ; inline
 : >pov ( long -- symbol )
-    dup HEX: FFFF bitand HEX: FFFF =
+    dup 0xFFFF bitand 0xFFFF =
     [ drop pov-neutral ]
     [ 2750 + 4500 /i pov-values nth ] if ; inline
 
@@ -303,8 +304,8 @@ CONSTANT: pov-values
     } 2cleave ;
 
 : read-device-buffer ( device buffer count -- buffer count' )
-    [ DIDEVICEOBJECTDATA heap-size ] 2dip <uint>
-    [ 0 IDirectInputDevice8W::GetDeviceData ole32-error ] 2keep *uint ;
+    [ DIDEVICEOBJECTDATA heap-size ] 2dip uint <ref>
+    [ 0 IDirectInputDevice8W::GetDeviceData ole32-error ] 2keep uint deref ;
 
 : (fill-mouse-state) ( state DIDEVICEOBJECTDATA -- state )
     [ dwData>> 32 >signed ] [ dwOfs>> ] bi {

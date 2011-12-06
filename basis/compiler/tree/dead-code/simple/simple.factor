@@ -1,7 +1,8 @@
 ! Copyright (C) 2008, 2010 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: kernel accessors words assocs sequences arrays namespaces
-fry locals definitions classes classes.algebra generic
+fry locals definitions classes classes.algebra generic math
+combinators math.private
 stack-checker.dependencies
 stack-checker.backend
 compiler.tree
@@ -56,7 +57,7 @@ M: #alien-node compute-live-values* nip look-at-inputs ;
     outputs
     mapping-keys
     mapping-values
-    filter-corresponding zip #data-shuffle ; inline
+    filter-corresponding zip <#data-shuffle> ; inline
 
 :: drop-dead-values ( outputs -- #shuffle )
     outputs length make-values :> new-outputs
@@ -91,12 +92,45 @@ M: #push remove-dead-code*
 
 : remove-flushable-call ( #call -- node )
     [ word>> depends-on-flushable ]
-    [ in-d>> #drop remove-dead-code* ]
+    [ in-d>> <#drop> remove-dead-code* ]
     bi ;
 
+: define-simplifications ( word seq -- )
+    "simplifications" set-word-prop ;
+
+\ /mod {
+    { { f t } /i }
+    { { t f } mod }
+} define-simplifications
+
+\ fixnum/mod {
+    { { f t } fixnum/i }
+    { { t f } fixnum-mod }
+} define-simplifications
+
+\ bignum/mod {
+    { { f t } bignum/i }
+    { { t f } bignum-mod }
+} define-simplifications
+
+: out-d-matches? ( out-d seq -- ? )
+    [ [ live-value? ] [ drop t ] if ] 2all? not ;
+
+: (simplify-call) ( #call -- new-word/f )
+    [ out-d>> ] [ word>> "simplifications" word-prop ] bi
+    [ first out-d-matches? ] with find nip dup [ second ] when ;
+
+: simplify-call ( #call -- nodes )
+    dup (simplify-call) [
+        >>word [ filter-live ] change-out-d
+    ] when* ;
+
 M: #call remove-dead-code*
-    dup dead-flushable-call?
-    [ remove-flushable-call ] [ maybe-drop-dead-outputs ] if ;
+    {
+        { [ dup dead-flushable-call? ] [ remove-flushable-call ] }
+        { [ dup word>> "simplifications" word-prop ] [ simplify-call ] }
+        [ maybe-drop-dead-outputs ]
+    } cond ;
 
 M: #shuffle remove-dead-code*
     [ filter-live ] change-in-d
@@ -108,7 +142,7 @@ M: #shuffle remove-dead-code*
 
 M: #copy remove-dead-code*
     [ in-d>> ] [ out-d>> ] bi
-    2dup swap zip #data-shuffle
+    2dup swap zip <#data-shuffle>
     remove-dead-code* ;
 
 M: #terminate remove-dead-code*

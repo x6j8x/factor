@@ -7,7 +7,7 @@ void factor_vm::check_frame(stack_frame *frame)
 {
 #ifdef FACTOR_DEBUG
 	check_code_pointer((cell)frame->entry_point);
-	assert(frame->size != 0);
+	FACTOR_ASSERT(frame->size != 0);
 #endif
 }
 
@@ -16,22 +16,6 @@ callstack *factor_vm::allot_callstack(cell size)
 	callstack *stack = allot<callstack>(callstack_object_size(size));
 	stack->length = tag_fixnum(size);
 	return stack;
-}
-
-/* If 'stack' points into the middle of the frame, find the nearest valid stack
-pointer where we can resume execution and hope to capture the call trace without
-crashing. Also, make sure we have at least 'stack_reserved' bytes available so
-that we don't run out of callstack space while handling the error. */
-stack_frame *factor_vm::fix_callstack_top(stack_frame *stack)
-{
-	stack_frame *frame = ctx->callstack_bottom - 1;
-
-	while(frame >= stack
-		&& frame >= ctx->callstack_top
-		&& (cell)frame >= ctx->callstack_seg->start + stack_reserved)
-		frame = frame_successor(frame);
-
-	return frame + 1;
 }
 
 /* We ignore the two topmost frames, the 'callstack' primitive
@@ -44,7 +28,7 @@ called by continuation implementation, and user code shouldn't
 be calling it at all, so we leave it as it is for now. */
 stack_frame *factor_vm::second_from_top_stack_frame(context *ctx)
 {
-	stack_frame *frame = ctx->callstack_bottom - 1;
+	stack_frame *frame = ctx->bottom_frame();
 	while(frame >= ctx->callstack_top
 		&& frame_successor(frame) >= ctx->callstack_top
 		&& frame_successor(frame_successor(frame)) >= ctx->callstack_top)
@@ -127,23 +111,6 @@ void factor_vm::set_frame_offset(stack_frame *frame, cell offset)
 		FRAME_RETURN_ADDRESS(frame,this) = entry_point + offset;
 }
 
-void factor_vm::scrub_return_address()
-{
-	stack_frame *top = ctx->callstack_top;
-	stack_frame *bottom = ctx->callstack_bottom;
-	stack_frame *frame = bottom - 1;
-
-	while(frame >= top && frame_successor(frame) >= top)
-		frame = frame_successor(frame);
-
-	set_frame_offset(frame,0);
-
-#ifdef FACTOR_DEBUG
-	/* Doing a GC here triggers all kinds of funny errors */
-	primitive_compact_gc();
-#endif
-}
-
 cell factor_vm::frame_scan(stack_frame *frame)
 {
 	switch(frame_type(frame))
@@ -196,10 +163,8 @@ void factor_vm::primitive_callstack_to_array()
 	ctx->push(accum.frames.elements.value());
 }
 
-stack_frame *factor_vm::innermost_stack_frame(callstack *stack)
+stack_frame *factor_vm::innermost_stack_frame(stack_frame *bottom, stack_frame *top)
 {
-	stack_frame *top = stack->top();
-	stack_frame *bottom = stack->bottom();
 	stack_frame *frame = bottom - 1;
 
 	while(frame >= top && frame_successor(frame) >= top)
@@ -212,27 +177,29 @@ stack_frame *factor_vm::innermost_stack_frame(callstack *stack)
 Used by the single stepper. */
 void factor_vm::primitive_innermost_stack_frame_executing()
 {
-	stack_frame *frame = innermost_stack_frame(untag_check<callstack>(ctx->pop()));
+	callstack *stack = untag_check<callstack>(ctx->pop());
+	stack_frame *frame = innermost_stack_frame(stack->bottom(), stack->top());
 	ctx->push(frame_executing_quot(frame));
 }
 
 void factor_vm::primitive_innermost_stack_frame_scan()
 {
-	stack_frame *frame = innermost_stack_frame(untag_check<callstack>(ctx->pop()));
+	callstack *stack = untag_check<callstack>(ctx->pop());
+	stack_frame *frame = innermost_stack_frame(stack->bottom(), stack->top());
 	ctx->push(frame_scan(frame));
 }
 
 void factor_vm::primitive_set_innermost_stack_frame_quot()
 {
-	data_root<callstack> callstack(ctx->pop(),this);
+	data_root<callstack> stack(ctx->pop(),this);
 	data_root<quotation> quot(ctx->pop(),this);
 
-	callstack.untag_check(this);
+	stack.untag_check(this);
 	quot.untag_check(this);
 
 	jit_compile_quot(quot.value(),true);
 
-	stack_frame *inner = innermost_stack_frame(callstack.untagged());
+	stack_frame *inner = innermost_stack_frame(stack->bottom(), stack->top());
 	cell offset = frame_offset(inner);
 	inner->entry_point = quot->entry_point;
 	set_frame_offset(inner,offset);

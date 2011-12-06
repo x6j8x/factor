@@ -23,7 +23,7 @@ HELP: output>array
      { "quot" quotation }
      { "newquot" quotation }
 }
-{ $description "Infers the number or outputs from the quotation and constructs an array from those outputs." }
+{ $description "Infers the number of outputs from the quotation and constructs an array from those outputs." }
 { $examples
     { $example
         "USING: combinators combinators.smart math prettyprint ;
@@ -158,10 +158,9 @@ HELP: nullary
 }
 { $description "Infers the number of inputs to a quotation and drops them from the stack." }
 { $examples
-    { $example
+    { $code
         """USING: combinators.smart kernel math ;
 1 2 [ + ] nullary"""
-""
     }
 } ;
 

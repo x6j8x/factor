@@ -1,5 +1,6 @@
-USING: kernel math math.constants math.functions math.order
-math.private math.libm tools.test ;
+USING: kernel literals math math.constants math.functions math.libm
+math.order math.ranges math.private sequences tools.test ;
+
 IN: math.functions.tests
 
 [ t ] [ 4 4 .00000001 ~ ] unit-test
@@ -26,25 +27,50 @@ IN: math.functions.tests
 [ t ] [ e pi i* ^ imaginary-part -0.00001 0.00001 between? ] unit-test
 
 [ 1/0. ] [ 2.0 1024 ^ ] unit-test
-[ HEX: 1.0p-1024 ] [ 2.0 -1024 ^ ] unit-test
+[ 0x1.0p-1024 ] [ 2.0 -1024 ^ ] unit-test
 
 [ t ] [ 0 0 ^ fp-nan? ] unit-test
 [ 0.0 ] [ 0.0 1.0 ^ ] unit-test
 [ 1/0. ] [ 0 -2 ^ ] unit-test
 [ t ] [ 0 0.0 ^ fp-nan? ] unit-test
+[ t ] [ 0.0 0.0 ^ fp-nan? ] unit-test
 [ 1/0. ] [ 0 -2.0 ^ ] unit-test
 [ 0 ] [ 0 3.0 ^ ] unit-test
 [ 0 ] [ 0 3 ^ ] unit-test
 
+: factorial ( n -- n! ) [ 1 ] [ [1,b] 1 [ * ] reduce ] if-zero ;
+
+[ 0.0 0 ] [ 0 frexp ] unit-test
+[ 0.5 1 ] [ 1 frexp ] unit-test
+[ -0.5 1 ] [ -1 frexp ] unit-test
+[ 0.5 2 ] [ 2 frexp ] unit-test
+[ -0.5 2 ] [ -2 frexp ] unit-test
+[ 0.75 2 ] [ 3 frexp ] unit-test
+[ -0.75 2 ] [ -3 frexp ] unit-test
+[ 0.75 0 ] [ 0.75 frexp ] unit-test
+[ -0.75 0 ] [ -0.75 frexp ] unit-test
+[ 1/0. ] [ 1/0. frexp drop ] unit-test
+[ -1/0. ] [ -1/0. frexp drop ] unit-test
+[ t ] [ 0/0. frexp drop fp-nan? ] unit-test
+[  0.75 10,002 t ] [  3 10,000 2^ * [ frexp ] [ bignum? ] bi ] unit-test
+[ -0.75 10,002 t ] [ -3 10,000 2^ * [ frexp ] [ bignum? ] bi ] unit-test
+
 [ 0.0 ] [ 1 log ] unit-test
 [ 0.0 ] [ 1.0 log ] unit-test
 [ 1.0 ] [ e log ] unit-test
+
+CONSTANT: log-factorial-1000 0x1.71820d04e2eb6p12
+CONSTANT: log10-factorial-1000 0x1.40f3593ed6f8ep11
+
+[ $ log-factorial-1000 t ] [ 1000 factorial [ log ] [ bignum? ] bi ] unit-test
+[ C{ $ log-factorial-1000 $ pi } t ] [ 1000 factorial neg [ log ] [ bignum? ] bi ] unit-test
 
 [ 0.0 ] [ 1.0 log10 ] unit-test
 [ 1.0 ] [ 10.0 log10 ] unit-test
 [ 2.0 ] [ 100.0 log10 ] unit-test
 [ 3.0 ] [ 1000.0 log10 ] unit-test
 [ 4.0 ] [ 10000.0 log10 ] unit-test
+[ $ log10-factorial-1000 t ] [ 1000 factorial [ log10 ] [ bignum? ] bi ] unit-test
 
 [ t ] [ 1 exp e 1.e-10 ~ ] unit-test
 [ f ] [ 1 exp 0/0. 1.e-10 ~ ] unit-test

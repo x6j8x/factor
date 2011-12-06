@@ -47,7 +47,7 @@ M: word print-stack-effect? drop t ;
 <PRIVATE
 
 : seeing-word ( word -- )
-    vocabulary>> dup [ vocab ] when pprinter-in set ;
+    vocabulary>> dup [ lookup-vocab ] when pprinter-in set ;
 
 : word-synopsis ( word -- )
     {
@@ -81,7 +81,7 @@ M: hook-generic synopsis*
 
 M: method synopsis*
     [ definer. ]
-    [ "method-class" word-prop pprint-word ]
+    [ "method-class" word-prop pprint-class ]
     [ "method-generic" word-prop pprint-word ] tri ;
 
 M: mixin-instance synopsis*
@@ -224,7 +224,7 @@ M: word see*
 : seeing-implementors ( class -- seq )
     dup implementors
     [ [ reader? ] [ writer? ] bi or not ] filter
-    [ method ] with map
+    [ lookup-method ] with map
     natural-sort ;
 
 : seeing-methods ( generic -- seq )

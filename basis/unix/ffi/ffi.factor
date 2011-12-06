@@ -9,8 +9,7 @@ IN: unix.ffi
 
 {
     { [ os linux? ] [ "unix.ffi.linux" require ] }
-    { [ os bsd? ] [ "unix.ffi.bsd" require ] }
-    { [ os solaris? ] [ "unix.ffi.solaris" require ] }
+    { [ os macosx? ] [ "unix.ffi.macosx" require ] }
 } cond
 
 >>
@@ -52,6 +51,11 @@ STRUCT: group
     { gr_gid int }
     { gr_mem c-string* } ;
 
+STRUCT: protoent
+    { name c-string }
+    { aliases void* }
+    { proto int } ;
+
 FUNCTION: int accept ( int s, void* sockaddr, socklen_t* socklen ) ;
 FUNCTION: int bind ( int s, void* name, socklen_t namelen ) ;
 FUNCTION: int chdir ( c-string path ) ;
@@ -75,6 +79,8 @@ FUNCTION: int getaddrinfo ( c-string hostname, c-string servname, addrinfo* hint
 FUNCTION: c-string getcwd ( c-string buf, size_t size ) ;
 FUNCTION: pid_t getpid ;
 FUNCTION: int getdtablesize ;
+FUNCTION: pid_t getpgrp ;
+FUNCTION: pid_t getpgid ( pid_t pid ) ;
 FUNCTION: gid_t getegid ;
 FUNCTION: uid_t geteuid ;
 FUNCTION: gid_t getgid ;
@@ -83,6 +89,7 @@ FUNCTION: c-string getenv ( c-string name ) ;
 FUNCTION: int getgrgid_r ( gid_t gid, group* grp, c-string buffer, size_t bufsize, group** result ) ;
 FUNCTION: int getgrnam_r ( c-string name, group* grp, c-string buffer, size_t bufsize, group** result ) ;
 FUNCTION: passwd* getpwent ( ) ;
+FUNCTION: int killpg ( pid_t pgrp, int sig ) ;
 FUNCTION: void setpwent ( ) ;
 FUNCTION: void setpassent ( int stayopen ) ;
 FUNCTION: passwd* getpwuid ( uid_t uid ) ;
@@ -100,6 +107,7 @@ FUNCTION: void endgrent ( ) ;
 FUNCTION: int gethostname ( c-string name, int len ) ;
 FUNCTION: int getsockname ( int socket, sockaddr* address, socklen_t* address_len ) ;
 FUNCTION: int getpeername ( int socket, sockaddr* address, socklen_t* address_len ) ;
+FUNCTION: protoent* getprotobyname ( c-string name ) ;
 FUNCTION: uid_t getuid ;
 FUNCTION: uint htonl ( uint n ) ;
 FUNCTION: ushort htons ( ushort n ) ;
@@ -147,8 +155,10 @@ FUNCTION: int setegid ( gid_t egid ) ;
 FUNCTION: int seteuid ( uid_t euid ) ;
 FUNCTION: int setgid ( gid_t gid ) ;
 FUNCTION: int setgroups ( int ngroups, gid_t* gidset ) ;
+FUNCTION: int setpgid ( pid_t pid, pid_t gid ) ;
 FUNCTION: int setregid ( gid_t rgid, gid_t egid ) ;
 FUNCTION: int setreuid ( uid_t ruid, uid_t euid ) ;
+FUNCTION: pid_t setsid ( ) ;
 FUNCTION: int setsockopt ( int s, int level, int optname, void* optval, socklen_t optlen ) ;
 FUNCTION: int setuid ( uid_t uid ) ;
 FUNCTION: int socket ( int domain, int type, int protocol ) ;

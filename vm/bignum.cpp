@@ -50,11 +50,6 @@
 
 #include "master.hpp"
 
-#include <limits>
-
-#include <stdio.h>
-#include <math.h>
-
 namespace factor
 {
 
@@ -381,24 +376,10 @@ FOO_TO_BIGNUM(ulong_long,u64,s64,u64)
 		}							\
 	}
 
-BIGNUM_TO_FOO(cell,cell,fixnum,cell);
-BIGNUM_TO_FOO(fixnum,fixnum,fixnum,cell);
+BIGNUM_TO_FOO(cell,cell,fixnum,cell)
+BIGNUM_TO_FOO(fixnum,fixnum,fixnum,cell)
 BIGNUM_TO_FOO(long_long,s64,s64,u64)
 BIGNUM_TO_FOO(ulong_long,u64,s64,u64)
-
-double factor_vm::bignum_to_double(bignum * bignum)
-{
-	if (BIGNUM_ZERO_P (bignum))
-		return (0);
-	{
-		double accumulator = 0;
-		bignum_digit_type * start = (BIGNUM_START_PTR (bignum));
-		bignum_digit_type * scan = (start + (BIGNUM_LENGTH (bignum)));
-		while (start < scan)
-			accumulator = ((accumulator * BIGNUM_RADIX) + (*--scan));
-		return ((BIGNUM_NEGATIVE_P (bignum)) ? (-accumulator) : accumulator);
-	}
-}
 
 #define DTB_WRITE_DIGIT(factor)						\
 {									\
@@ -1726,43 +1707,6 @@ int factor_vm::bignum_unsigned_logbitp(int shift, bignum * bignum)
 	int p = shift % BIGNUM_DIGIT_LENGTH;
 	bignum_digit_type mask = ((fixnum)1) << p;
 	return (digit & mask) ? 1 : 0;
-}
-
-/* Allocates memory */
-bignum *factor_vm::digit_stream_to_bignum(unsigned int n_digits, unsigned int (*producer)(unsigned int, factor_vm*), unsigned int radix, int negative_p)
-{
-	BIGNUM_ASSERT ((radix > 1) && (radix <= BIGNUM_RADIX_ROOT));
-	if (n_digits == 0)
-		return (BIGNUM_ZERO ());
-	if (n_digits == 1)
-	{
-		fixnum digit = ((fixnum) ((*producer) (0,this)));
-		return (fixnum_to_bignum (negative_p ? (- digit) : digit));
-	}
-	{
-		bignum_length_type length;
-		{
-			unsigned int radix_copy = radix;
-			unsigned int log_radix = 0;
-			while (radix_copy > 0)
-			{
-				radix_copy >>= 1;
-				log_radix += 1;
-			}
-			/* This length will be at least as large as needed. */
-			length = (BIGNUM_BITS_TO_DIGITS (n_digits * log_radix));
-		}
-		{
-			bignum * result = (allot_bignum_zeroed (length, negative_p));
-			while ((n_digits--) > 0)
-			{
-				bignum_destructive_scale_up (result, ((bignum_digit_type) radix));
-				bignum_destructive_add
-					(result, ((bignum_digit_type) ((*producer) (n_digits,this))));
-			}
-			return (bignum_trim (result));
-		}
-	}
 }
 
 }

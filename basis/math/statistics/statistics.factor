@@ -1,8 +1,7 @@
 ! Copyright (C) 2008 Doug Coleman, Michael Judge.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: arrays combinators kernel math math.functions
-math.order sequences sorting locals sequences.private
-assocs fry ;
+USING: assocs combinators generalizations kernel locals math
+math.functions math.order sequences sequences.private sorting ;
 IN: math.statistics
 
 : mean ( seq -- x )
@@ -59,35 +58,41 @@ IN: math.statistics
 
 <PRIVATE
 
-: (sequence>assoc) ( seq quot assoc -- assoc )
-    [ swap curry each ] keep ; inline
+: (sequence>assoc) ( seq map-quot: ( x -- ..y ) insert-quot: ( ..y assoc -- ) assoc -- assoc )
+    [ swap curry compose each ] keep ; inline
 
 PRIVATE>
 
-: sequence>assoc! ( assoc seq quot: ( obj assoc -- ) -- assoc )
-    rot (sequence>assoc) ; inline
+: sequence>assoc! ( assoc seq map-quot: ( x -- ..y ) insert-quot: ( ..y assoc -- ) -- assoc )
+    4 nrot (sequence>assoc) ; inline
 
-: sequence>assoc ( seq quot: ( obj assoc -- ) exemplar -- assoc )
+: sequence>assoc ( seq map-quot: ( x -- ..y ) insert-quot: ( ..y assoc -- ) exemplar -- assoc )
     clone (sequence>assoc) ; inline
 
-: sequence>hashtable ( seq quot: ( obj hashtable -- ) -- hashtable )
+: sequence>hashtable ( seq map-quot: ( x -- ..y ) insert-quot: ( ..y assoc -- ) -- hashtable )
     H{ } sequence>assoc ; inline
 
 : histogram! ( hashtable seq -- hashtable )
-    [ inc-at ] sequence>assoc! ;
+    [ ] [ inc-at ] sequence>assoc! ;
+
+: histogram-by ( seq quot: ( x -- bin ) -- hashtable )
+    [ inc-at ] sequence>hashtable ; inline
 
 : histogram ( seq -- hashtable )
-    [ inc-at ] sequence>hashtable ;
+    [ ] histogram-by ;
 
 : sorted-histogram ( seq -- alist )
-    histogram >alist sort-values ;
+    histogram sort-values ;
 
-: collect-values ( seq quot: ( obj hashtable -- ) -- hash )
-    '[ [ dup @ ] dip push-at ] sequence>hashtable ; inline
+: collect-pairs ( seq quot: ( x -- v k ) -- hashtable )
+    [ push-at ] sequence>hashtable ; inline
+
+: collect-by ( seq quot: ( x -- x' ) -- hashtable )
+    [ dup ] prepose collect-pairs ; inline
 
 : mode ( seq -- x )
     histogram >alist
-    [ ] [ [ [ second ] bi@ > ] 2keep ? ] map-reduce first ;
+    [ ] [ [ [ second ] bi@ > ] most ] map-reduce first ;
 
 ERROR: empty-sequence ;
 

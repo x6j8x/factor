@@ -1,8 +1,8 @@
 ! Copyright (C) 2004, 2010 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: kernel classes classes.private combinators accessors
-sequences arrays vectors assocs namespaces words sorting layouts
-math hashtables kernel.private sets math.order ;
+USING: accessors arrays assocs classes classes.private
+combinators kernel math math.order namespaces sequences sorting
+vectors words ;
 FROM: classes => members ;
 RENAME: members sets => set-members
 IN: classes.algebra
@@ -10,6 +10,8 @@ IN: classes.algebra
 <PRIVATE
 
 TUPLE: anonymous-union { members read-only } ;
+
+INSTANCE: anonymous-union classoid
 
 : <anonymous-union> ( members -- class )
     [ null eq? not ] filter set-members
@@ -19,6 +21,8 @@ M: anonymous-union rank-class drop 6 ;
 
 TUPLE: anonymous-intersection { participants read-only } ;
 
+INSTANCE: anonymous-intersection classoid
+
 : <anonymous-intersection> ( participants -- class )
     set-members dup length 1 =
     [ first ] [ anonymous-intersection boa ] if ;
@@ -26,6 +30,8 @@ TUPLE: anonymous-intersection { participants read-only } ;
 M: anonymous-intersection rank-class drop 4 ;
 
 TUPLE: anonymous-complement { class read-only } ;
+
+INSTANCE: anonymous-complement classoid
 
 C: <anonymous-complement> anonymous-complement
 
@@ -52,12 +58,16 @@ M: object normalize-class ;
 
 PRIVATE>
 
-GENERIC: classoid? ( obj -- ? )
+GENERIC: valid-classoid? ( obj -- ? )
 
-M: word classoid? class? ;
-M: anonymous-union classoid? members>> [ classoid? ] all? ;
-M: anonymous-intersection classoid? participants>> [ classoid? ] all? ;
-M: anonymous-complement classoid? class>> classoid? ;
+M: word valid-classoid? class? ;
+M: anonymous-union valid-classoid? members>> [ valid-classoid? ] all? ;
+M: anonymous-intersection valid-classoid? participants>> [ valid-classoid? ] all? ;
+M: anonymous-complement valid-classoid? class>> valid-classoid? ;
+M: object valid-classoid? drop f ;
+
+: only-classoid? ( obj -- ? )
+    [ classoid? ] [ class? not ] bi and ;
 
 : class<= ( first second -- ? )
     class<=-cache get [ (class<=) ] 2cache ;
@@ -255,7 +265,7 @@ ERROR: topological-sort-failed ;
     [ topological-sort-failed ] unless* ;
 
 : sort-classes ( seq -- newseq )
-    [ name>> ] sort-with >vector
+    [ class-name ] sort-with >vector
     [ dup empty? not ]
     [ dup largest-class [ swap remove-nth! ] dip ]
     produce nip ;

@@ -8,8 +8,8 @@ IN: variants
 PREDICATE: variant-class < mixin-class "variant" word-prop ;
 
 M: variant-class initial-value*
-    dup members [ no-initial-value ]
-    [ nip first dup word? [ initial-value* ] unless ] if-empty ;
+    dup members [ drop f f ]
+    [ nip first dup word? [ t ] [ initial-value* ] if ] if-empty ;
 
 : define-tuple-class-and-boa-word ( class superclass slots -- )
     pick [ define-tuple-class ] dip
@@ -38,17 +38,17 @@ M: variant-class initial-value*
     ":" ?tail [ parse-variant-tuple-member ] [ create-class-in ] if ;
 
 : parse-variant-members ( -- members )
-    [ scan dup ";" = not ]
+    [ scan-token dup ";" = not ]
     [ parse-variant-member ] produce nip ;
 
 SYNTAX: VARIANT:
-    CREATE-CLASS
+    scan-new-class
     parse-variant-members
     define-variant-class-members ;
 
 SYNTAX: VARIANT-MEMBER:
     scan-word
-    scan parse-variant-member
+    scan-token parse-variant-member
     define-variant-class-member ;
 
 MACRO: unboa ( class -- )
@@ -62,7 +62,7 @@ M: object (match-branch)
     over \ unboa [ ] 2sequence prepend ;
 
 : ?class ( object -- class )
-    dup word? [ class ] unless ;
+    dup word? [ class-of ] unless ;
 
 MACRO: match ( branches -- )
     [ dup callable? [ first2 (match-branch) 2array ] unless ] map

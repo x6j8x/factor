@@ -1,10 +1,10 @@
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: accessors alien.c-types arrays assocs byte-arrays
-byte-vectors combinators fry io.backend io.binary kernel locals
-math math.bitwise math.constants math.functions math.order
-math.ranges namespaces sequences sets summary system
-vocabs.loader ;
+USING: accessors alien.c-types alien.data arrays assocs
+byte-arrays byte-vectors combinators fry io.backend io.binary
+kernel locals math math.bitwise math.constants math.functions
+math.order math.ranges namespaces sequences sequences.private
+sets summary system vocabs hints typed ;
 IN: random
 
 SYMBOL: system-random-generator
@@ -17,13 +17,15 @@ GENERIC: random-bytes* ( n tuple -- byte-array )
 
 M: object random-bytes* ( n tuple -- byte-array )
     [ [ <byte-vector> ] keep 4 /mod ] dip
-    [ pick '[ _ random-32* 4 >le _ push-all ] times ]
+    [ pick '[ _ random-32* int <ref> _ push-all ] times ]
     [
         over zero?
-        [ 2drop ] [ random-32* 4 >le swap head append! ] if
-    ] bi-curry bi* ;
+        [ 2drop ] [ random-32* int <ref> swap head append! ] if
+    ] bi-curry bi* B{ } like ;
 
-M: object random-32* ( tuple -- r ) 4 swap random-bytes* le> ;
+HINTS: M\ object random-bytes* { fixnum object } ;
+
+M: object random-32* ( tuple -- r ) 4 swap random-bytes* be> ;
 
 ERROR: no-random-number-generator ;
 
@@ -34,15 +36,21 @@ M: f random-bytes* ( n obj -- * ) no-random-number-generator ;
 
 M: f random-32* ( obj -- * ) no-random-number-generator ;
 
-: random-bytes ( n -- byte-array )
-    random-generator get random-bytes* ;
+: random-32 ( -- n ) random-generator get random-32* ;
+
+TYPED: random-bytes ( n: fixnum -- byte-array: byte-array )
+    random-generator get random-bytes* ; inline
 
 <PRIVATE
 
+: (random-integer) ( bits -- n required-bits )
+    [ random-32 32 ] dip 32 - [ dup 0 > ] [
+        [ 32 shift random-32 + ] [ 32 + ] [ 32 - ] tri*
+    ] while drop ;
+
 : random-integer ( n -- n' )
-    dup log2 7 + 8 /i 1 +
-    [ random-bytes >byte-array byte-array>bignum ]
-    [ 3 shift 2^ ] bi / * >integer ;
+    dup next-power-of-2 log2 (random-integer)
+    [ * ] [ 2^ /i ] bi* ;
 
 PRIVATE>
 
@@ -60,11 +68,9 @@ M: sequence random
         [ length random-integer ] keep nth
     ] if-empty ;
 
-: random-32 ( -- n ) random-generator get random-32* ;
-
-: randomize-n-last ( seq n -- seq ) 
-    [ dup length dup ] dip - 1 max '[ dup _ > ] 
-    [ [ random ] [ 1 - ] bi [ pick exchange ] keep ]
+: randomize-n-last ( seq n -- seq )
+    [ dup length dup ] dip - 1 max '[ dup _ > ]
+    [ [ random ] [ 1 - ] bi [ pick exchange-unsafe ] keep ]
     while drop ;
 
 : randomize ( seq -- randomized )
@@ -90,18 +96,20 @@ ERROR: too-many-samples seq n ;
     secure-random-generator get swap with-random ; inline
 
 : uniform-random-float ( min max -- n )
-    4 random-bytes underlying>> *uint >float
-    4 random-bytes underlying>> *uint >float
+    4 random-bytes uint deref >float
+    4 random-bytes uint deref >float
     2.0 32 ^ * +
     [ over - 2.0 -64 ^ * ] dip
     * + ; inline
 
+: (cos-random-float) ( -- n )
+    0. 2. pi * uniform-random-float cos ;
+
+: (log-sqrt-random-float) ( -- n )
+    0. 1. uniform-random-float log -2. * sqrt ;
+
 : normal-random-float ( mean sigma -- n )
-    0.0 1.0 uniform-random-float
-    0.0 1.0 uniform-random-float
-    [ 2 pi * * cos ]
-    [ 1.0 swap - log -2.0 * sqrt ]
-    bi* * * + ;
+    (cos-random-float) (log-sqrt-random-float) * * + ;
 
 {
     { [ os windows? ] [ "random.windows" require ] }

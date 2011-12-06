@@ -10,8 +10,8 @@ TUPLE: lexer text line line-text line-length column parsing-words ;
 TUPLE: lexer-parsing-word word line line-text column ;
 
 : next-line ( lexer -- )
-    dup [ line>> ] [ text>> ] bi ?nth >>line-text
-    dup line-text>> length >>line-length
+    dup [ line>> ] [ text>> ] bi ?nth
+    [ >>line-text ] [ length >>line-length ] bi
     [ 1 + ] change-line
     0 >>column
     drop ;
@@ -26,7 +26,7 @@ TUPLE: lexer-parsing-word word line line-text column ;
     ] [ parsing-words>> push ] bi ;
 
 : pop-parsing-word ( -- )
-    lexer get parsing-words>> pop drop ;
+    lexer get parsing-words>> pop* ;
 
 : new-lexer ( text class -- lexer )
     new
@@ -58,9 +58,23 @@ M: lexer skip-blank ( lexer -- )
 
 GENERIC: skip-word ( lexer -- )
 
+<PRIVATE
+
+: quote? ( column text -- ? )
+    nth CHAR: " eq? ; inline
+
+: shebang? ( column text -- ? )
+    swap zero? [ "#!" head? ] [ drop f ] if ; inline
+
+PRIVATE>
+
 M: lexer skip-word ( lexer -- )
     [
-        2dup nth CHAR: " eq? [ drop 1 + ] [ f skip ] if
+        {
+            { [ 2dup quote? ] [ drop 1 + ] }
+            { [ 2dup shebang? ] [ drop 2 + ] }
+            [ f skip ]
+        } cond
     ] change-lexer-column ;
 
 : still-parsing? ( lexer -- ? )
@@ -84,13 +98,13 @@ M: lexer skip-word ( lexer -- )
         [ (parse-token) ] [ dup next-line parse-token ] if
     ] [ drop f ] if ;
 
-: scan ( -- str/f ) lexer get parse-token ;
+: (scan-token) ( -- str/f ) lexer get parse-token ;
 
 PREDICATE: unexpected-eof < unexpected got>> not ;
 
 : unexpected-eof ( word -- * ) f unexpected ;
 
-: scan-token ( -- str ) scan [ "token" unexpected-eof ] unless* ;
+: scan-token ( -- str ) (scan-token) [ "token" unexpected-eof ] unless* ;
 
 : expect ( token -- )
     scan-token 2dup = [ 2drop ] [ unexpected ] if ;
@@ -150,7 +164,3 @@ M: lexer-error error-line [ error>> error-line ] [ line>> ] bi or ;
 
 : with-lexer ( lexer quot -- newquot )
     [ lexer set ] dip [ <lexer-error> rethrow ] recover ; inline
-
-SYMBOL: lexer-factory
-
-[ <lexer> ] lexer-factory set-global

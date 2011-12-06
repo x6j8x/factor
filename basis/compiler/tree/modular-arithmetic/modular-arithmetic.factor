@@ -10,6 +10,7 @@ compiler.tree.def-use
 compiler.tree.def-use.simplified
 compiler.tree.late-optimizations ;
 FROM: namespaces => set ;
+FROM: assocs => change-at ;
 IN: compiler.tree.modular-arithmetic
 
 ! This is a late-stage optimization.
@@ -108,7 +109,7 @@ M: node compute-modular-candidates*
 GENERIC: only-reads-low-order? ( node -- ? )
 
 : output-modular? ( #call -- ? )
-    out-d>> first modular-values get key? ;
+    out-d>> first modular-value? ;
 
 M: #call only-reads-low-order?
     {
@@ -154,7 +155,8 @@ M: #push optimize-modular-arithmetic*
 MEMO: fixnum-coercion ( flags -- nodes )
     ! flags indicate which input parameters are already known to be fixnums,
     ! and don't need a coercion as a result.
-    [ [ ] [ >fixnum ] ? ] map '[ _ spread ] splice-quot ;
+    [ [ ] [ >fixnum ] ? ] map shallow-spread>quot
+    '[ _ call ] splice-quot ;
 
 : modular-value-info ( #call -- alist )
     [ in-d>> ] [ out-d>> ] bi append

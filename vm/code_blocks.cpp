@@ -54,8 +54,8 @@ cell factor_vm::code_block_owner(code_block *compiled)
 		tagged<quotation> quot(owner.as<quotation>());
 		tagged<array> elements(quot->array);
 #ifdef FACTOR_DEBUG
-		assert(array_capacity(elements.untagged()) == 5);
-		assert(array_nth(elements.untagged(),4) == special_objects[PIC_MISS_WORD]
+		FACTOR_ASSERT(array_capacity(elements.untagged()) == 5);
+		FACTOR_ASSERT(array_nth(elements.untagged(),4) == special_objects[PIC_MISS_WORD]
 			|| array_nth(elements.untagged(),4) == special_objects[PIC_MISS_TAIL_WORD]);
 #endif
 		tagged<wrapper> word_wrapper(array_nth(elements.untagged(),0));
@@ -140,28 +140,18 @@ void factor_vm::update_word_references(code_block *compiled, bool reset_inline_c
 	}
 }
 
-/* References to undefined symbols are patched up to call this function on
-image load */
-void factor_vm::undefined_symbol()
-{
-	general_error(ERROR_UNDEFINED_SYMBOL,false_object,false_object);
-}
-
-void undefined_symbol()
-{
-	return current_vm()->undefined_symbol();
-}
-
 /* Look up an external library symbol referenced by a compiled code block */
-cell factor_vm::compute_dlsym_address(array *literals, cell index)
+cell factor_vm::compute_dlsym_address(array *parameters, cell index)
 {
-	cell symbol = array_nth(literals,index);
-	cell library = array_nth(literals,index + 1);
+	cell symbol = array_nth(parameters,index);
+	cell library = array_nth(parameters,index + 1);
 
 	dll *d = (to_boolean(library) ? untag<dll>(library) : NULL);
 
+	void* undefined_symbol = (void*)factor::undefined_symbol;
+	undefined_symbol = FUNCTION_CODE_POINTER(undefined_symbol);
 	if(d != NULL && !d->handle)
-		return (cell)factor::undefined_symbol;
+		return (cell)undefined_symbol;
 
 	switch(tagged<object>(symbol).type())
 	{
@@ -173,7 +163,7 @@ cell factor_vm::compute_dlsym_address(array *literals, cell index)
 			if(sym)
 				return (cell)sym;
 			else
-				return (cell)factor::undefined_symbol;
+				return (cell)undefined_symbol;
 		}
 	case ARRAY_TYPE:
 		{
@@ -186,13 +176,57 @@ cell factor_vm::compute_dlsym_address(array *literals, cell index)
 				if(sym)
 					return (cell)sym;
 			}
-			return (cell)factor::undefined_symbol;
+			return (cell)undefined_symbol;
 		}
 	default:
 		critical_error("Bad symbol specifier",symbol);
-		return (cell)factor::undefined_symbol;
+		return (cell)undefined_symbol;
 	}
 }
+
+#ifdef FACTOR_PPC
+cell factor_vm::compute_dlsym_toc_address(array *parameters, cell index)
+{
+	cell symbol = array_nth(parameters,index);
+	cell library = array_nth(parameters,index + 1);
+
+	dll *d = (to_boolean(library) ? untag<dll>(library) : NULL);
+
+	void* undefined_toc = (void*)factor::undefined_symbol;
+	undefined_toc = FUNCTION_TOC_POINTER(undefined_toc);
+	if(d != NULL && !d->handle)
+		return (cell)undefined_toc;
+
+	switch(tagged<object>(symbol).type())
+	{
+	case BYTE_ARRAY_TYPE:
+		{
+			symbol_char *name = alien_offset(symbol);
+			void* toc = ffi_dlsym_toc(d,name);
+			if(toc)
+				return (cell)toc;
+			else
+				return (cell)undefined_toc;
+		}
+	case ARRAY_TYPE:
+		{
+			array *names = untag<array>(symbol);
+			for(cell i = 0; i < array_capacity(names); i++)
+			{
+				symbol_char *name = alien_offset(array_nth(names,i));
+				void *toc = ffi_dlsym_toc(d,name);
+
+				if(toc)
+					return (cell)toc;
+			}
+			return (cell)undefined_toc;
+		}
+	default:
+		critical_error("Bad symbol specifier",symbol);
+		return (cell)undefined_toc;
+	}
+}
+#endif
 
 cell factor_vm::compute_vm_address(cell arg)
 {
@@ -201,9 +235,9 @@ cell factor_vm::compute_vm_address(cell arg)
 
 void factor_vm::store_external_address(instruction_operand op)
 {
-	code_block *compiled = op.parent_code_block();
+	code_block *compiled = op.compiled;
 	array *parameters = (to_boolean(compiled->parameters) ? untag<array>(compiled->parameters) : NULL);
-	cell index = op.parameter_index();
+	cell index = op.index;
 
 	switch(op.rel_type())
 	{
@@ -230,6 +264,17 @@ void factor_vm::store_external_address(instruction_operand op)
 		op.store_value((cell)&factor::exception_handler);
 		break;
 #endif
+#ifdef FACTOR_PPC
+	case RT_DLSYM_TOC:
+		op.store_value(compute_dlsym_toc_address(parameters,index));
+		break;
+#endif
+	case RT_INLINE_CACHE_MISS:
+		op.store_value((cell)&factor::inline_cache_miss);
+		break;
+	case RT_SAFEPOINT:
+		op.store_value((cell)code->safepoint_page);
+		break;
 	default:
 		critical_error("Bad rel type in store_external_address()",op.rel_type());
 		break;
@@ -275,7 +320,7 @@ struct initial_code_block_visitor {
 			op.store_value(parent->compute_entry_point_pic_tail_address(next_literal()));
 			break;
 		case RT_HERE:
-			op.store_value(parent->compute_here_address(next_literal(),op.rel_offset(),op.parent_code_block()));
+			op.store_value(parent->compute_here_address(next_literal(),op.rel_offset(),op.compiled));
 			break;
 		case RT_UNTAGGED:
 			op.store_value(untag_fixnum(next_literal()));
@@ -391,12 +436,58 @@ code_block *factor_vm::add_code_block(code_block_type type, cell code_, cell lab
 	method returns, except when compiling words with the non-optimizing
 	compiler at the beginning of bootstrap */
 	this->code->uninitialized_blocks.insert(std::make_pair(compiled,literals.value()));
+	this->code->all_blocks.insert(compiled);
 
 	/* next time we do a minor GC, we have to trace this code block, since
 	the fields of the code_block struct might point into nursery or aging */
 	this->code->write_barrier(compiled);
 
 	return compiled;
+}
+
+/* Find the RT_DLSYM relocation nearest to the given return address. */
+struct find_symbol_at_address_visitor {
+	factor_vm *parent;
+	cell return_address;
+	cell symbol;
+	cell library;
+
+	find_symbol_at_address_visitor(factor_vm *parent_, cell return_address_) :
+		parent(parent_), return_address(return_address_),
+		symbol(false_object), library(false_object) { }
+
+	void operator()(instruction_operand op)
+	{
+		if(op.rel_type() == RT_DLSYM && op.pointer <= return_address)
+		{
+			code_block *compiled = op.compiled;
+			array *parameters = untag<array>(compiled->parameters);
+			cell index = op.index;
+			symbol = array_nth(parameters,index);
+			library = array_nth(parameters,index + 1);
+		}
+	}
+};
+
+/* References to undefined symbols are patched up to call this function on
+image load. It finds the symbol and library, and throws an error. */
+void factor_vm::undefined_symbol()
+{
+	stack_frame *frame = innermost_stack_frame(ctx->callstack_bottom,
+		ctx->callstack_top);
+	code_block *compiled = frame_code(frame);
+	cell return_address = (cell)FRAME_RETURN_ADDRESS(frame, this);
+	find_symbol_at_address_visitor visitor(this, return_address);
+	compiled->each_instruction_operand(visitor);
+	if (!to_boolean(visitor.symbol))
+		critical_error("Can't find RT_DLSYM at return address", return_address);
+	else
+		general_error(ERROR_UNDEFINED_SYMBOL,visitor.symbol,visitor.library);
+}
+
+void undefined_symbol()
+{
+	return current_vm()->undefined_symbol();
 }
 
 }

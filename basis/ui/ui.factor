@@ -7,6 +7,7 @@ destructors dlists fry init kernel lexer make math namespaces
 parser sequences sets strings threads ui.backend ui.gadgets
 ui.gadgets.private ui.gadgets.worlds ui.gestures vocabs.parser
 words ;
+FROM: namespaces => change-global ;
 IN: ui
 
 <PRIVATE
@@ -141,7 +142,7 @@ SYMBOL: ui-thread
 
 PRIVATE>
 
-: find-window ( quot -- world )
+: find-window ( quot: ( world -- ? ) -- world )
     [ windows get values ] dip
     '[ dup children>> [ ] [ nip first ] if-empty @ ]
     find-last nip ; inline
@@ -221,11 +222,11 @@ HOOK: system-alert ui-backend ( caption text -- )
 
 : define-main-window ( word attributes quot -- )
     [
-        '[ [ f _ clone @ open-window ] with-ui ] (( -- )) define-declared
+        '[ [ f _ clone @ open-window ] with-ui ] ( -- ) define-declared
     ] [ 2drop current-vocab main<< ] 3bi ;
 
 SYNTAX: MAIN-WINDOW:
-    CREATE
+    scan-new-word
     world-attributes parse-main-window-attributes
     parse-definition
     define-main-window ;

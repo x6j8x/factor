@@ -1,7 +1,7 @@
-! Copyright (C) 2008, 2010 Slava Pestov.
+! Copyright (C) 2008, 2011 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: io.encodings.utf8 io.encodings.binary
-io.files io.files.temp io.directories html.streams help kernel
+USING: io.encodings.utf8 io.encodings.binary io.files
+io.files.temp io.directories html.streams help help.home kernel
 assocs sequences make words accessors arrays help.topics vocabs
 vocabs.hierarchy help.vocabs namespaces prettyprint io
 vocabs.loader serialize fry memoize unicode.case math.order
@@ -60,16 +60,35 @@ M: f topic>filename* drop \ f topic>filename* ;
 
 M: topic url-of topic>filename ;
 
-: help-stylesheet ( -- string )
+: help-stylesheet ( -- xml )
     "vocab:help/html/stylesheet.css" ascii file-contents
     [XML <style><-></style> XML] ;
 
+: help-navbar ( -- xml )
+    "conventions" >link topic>filename
+    [XML
+        <div class="navbar">
+        <b> Factor Documentation </b> |
+        <a href="/">Home</a> |
+        <a href=<->>Glossary</a> |
+        <form method="get" action="/search" style="display:inline;">
+            <input name="search" type="text"/>
+            <button type="submit">Search</button>
+        </form>
+        <a href="http://factorcode.org" style="float:right; padding: 4px;">factorcode.org</a>
+        </div>
+     XML] ;
+
 : help>html ( topic -- xml )
-    [ article-title ]
+    [ article-title " - Factor Documentation" append ]
     [ drop help-stylesheet ]
-    [ [ print-topic ] with-html-writer ]
-    tri simple-page ;
-          
+    [
+        [ help-navbar ]
+        [ [ print-topic ] with-html-writer ]
+        bi* append
+    ] tri
+    simple-page ;
+
 : generate-help-file ( topic -- )
     dup topic>filename utf8 [ help>html write-xml ] with-file-writer ;
 
@@ -95,8 +114,17 @@ M: topic url-of topic>filename ;
     all-words [ dup name>> ] { } map>assoc "words.idx" serialize-index
     all-vocabs-really [ dup vocab-name ] { } map>assoc "vocabs.idx" serialize-index ;
 
-: generate-help-files ( -- )
+: (generate-help-files) ( -- )
     all-topics [ '[ _ generate-help-file ] try ] each ;
+
+: generate-help-files ( -- )
+    [
+        recent-searches off
+        recent-words off
+        recent-articles off
+        recent-vocabs off
+        (generate-help-files)
+    ] with-scope ;
 
 : generate-help ( -- )
     "docs" temp-file
@@ -113,11 +141,15 @@ MEMO: load-index ( name -- index )
 
 TUPLE: result title href ;
 
+: partition-exact ( string results -- results' )
+    [ title>> = ] with partition append ;
+
 : offline-apropos ( string index -- results )
-    load-index swap >lower
+    load-index over >lower
     '[ [ drop _ ] dip >lower subseq? ] assoc-filter
     [ swap result boa ] { } assoc>map
-    [ title>> ] sort-with ;
+    [ title>> ] sort-with
+    partition-exact ;
 
 : article-apropos ( string -- results )
     "articles.idx" offline-apropos ;

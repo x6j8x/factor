@@ -16,7 +16,7 @@ ERROR: not-a-tuple object ;
 : all-slots ( class -- slots )
     superclasses [ "slots" word-prop ] map concat ;
 
-PREDICATE: immutable-tuple-class < tuple-class ( class -- ? )
+PREDICATE: immutable-tuple-class < tuple-class
     all-slots [ read-only>> ] all? ;
 
 <PRIVATE
@@ -27,14 +27,14 @@ PREDICATE: immutable-tuple-class < tuple-class ( class -- ? )
 : layout-of ( tuple -- layout )
     1 slot { array } declare ; inline
 
-M: tuple class layout-of 2 slot { word } declare ; inline
+M: tuple class-of layout-of 2 slot { word } declare ; inline
 
 : tuple-size ( tuple -- size )
     layout-of 3 slot { fixnum } declare ; inline
 
 : layout-up-to-date? ( object -- ? )
     dup tuple?
-    [ [ layout-of ] [ class tuple-layout ] bi eq? ] [ drop t ] if ;
+    [ [ layout-of ] [ class-of tuple-layout ] bi eq? ] [ drop t ] if ;
 
 : check-tuple ( object -- tuple )
     dup tuple? [ not-a-tuple ] unless ; inline
@@ -134,7 +134,7 @@ M: class final-class? drop t ;
     superclasses [ "slots" word-prop length ] map-sum ;
 
 : boa-check-quot ( class -- quot )
-    all-slots [ class>> instance-check-quot ] map spread>quot
+    all-slots [ class>> instance-check-quot ] map shallow-spread>quot
     f like ;
 
 : define-boa-check ( class -- )
@@ -196,7 +196,7 @@ SYMBOL: outdated-tuples
 
 : outdated-tuple? ( tuple assoc -- ? )
     [ [ layout-of ] dip key? ]
-    [ drop class "forgotten" word-prop not ]
+    [ drop class-of "forgotten" word-prop not ]
     2bi and ;
 
 : update-tuples ( -- )
@@ -290,16 +290,24 @@ M: tuple-class (define-tuple-class)
     3dup tuple-class-unchanged?
     [ 2drop ?define-symbol ] [ redefine-tuple-class ] if ;
 
+PREDICATE: error-class < tuple-class
+    "error-class" word-prop ;
+
+M: error-class reset-class
+    [ call-next-method ] [ "error-class" remove-word-prop ] bi ;
+
 : define-error-class ( class superclass slots -- )
-    error-slots
-    [ define-tuple-class ]
-    [ 2drop reset-generic ]
-    [
-        2drop
-        [ dup [ boa throw ] curry ]
-        [ all-slots thrower-effect ]
-        bi define-declared
-    ] 3tri ;
+    error-slots {
+        [ define-tuple-class ]
+        [ 2drop reset-generic ]
+        [ 2drop t "error-class" set-word-prop ]
+        [
+            2drop
+            [ dup [ boa throw ] curry ]
+            [ all-slots thrower-effect ]
+            bi define-declared
+        ]
+    } 3cleave ;
 
 : boa-effect ( class -- effect )
     [ all-slots [ name>> ] map ] [ name>> 1array ] bi <effect> ;
@@ -307,13 +315,16 @@ M: tuple-class (define-tuple-class)
 : define-boa-word ( word class -- )
     [ [ boa ] curry ] [ boa-effect ] bi define-inline ;
 
+: forget-slot-accessors ( class slots -- )
+    [
+        name>>
+        [ reader-word ?lookup-method forget ]
+        [ writer-word ?lookup-method forget ] 2bi
+    ] with each ;
+
 M: tuple-class reset-class
     [
-        dup "slots" word-prop [
-            name>>
-            [ reader-word method forget ]
-            [ writer-word method forget ] 2bi
-        ] with each
+        dup "slots" word-prop forget-slot-accessors
     ] [
         [ call-next-method ]
         [ { "layout" "slots" "boa-check" "prototype" "final" } reset-props ]
@@ -342,17 +353,17 @@ M: tuple clone (clone) ; inline
 
 M: tuple equal? over tuple? [ tuple= ] [ 2drop f ] if ;
 
-GENERIC: tuple-hashcode ( n tuple -- x )
-
-M: tuple tuple-hashcode
+: tuple-hashcode ( depth obj -- hash )
     [
-        [ class hashcode ] [ tuple-size iota ] [ ] tri
-        [ rot ] dip [
-            swapd array-nth hashcode* sequence-hashcode-step
-        ] 2curry each
-    ] recursive-hashcode ;
+        [ drop 1000003 ] dip
+        [ class-of hashcode ] [ tuple-size ] bi
+        [ dup fixnum+fast 82520 fixnum+fast ] [ iota ] bi
+    ] 2keep [
+        swapd array-nth hashcode* >fixnum rot fixnum-bitxor
+        pick fixnum*fast [ [ fixnum+fast ] keep ] dip swap
+    ] 2curry each drop nip 97531 fixnum+fast ; inline
 
-M: tuple hashcode* tuple-hashcode ;
+M: tuple hashcode* [ tuple-hashcode ] recursive-hashcode ;
 
 M: tuple-class new
     dup "prototype" word-prop [ (clone) ] [ tuple-layout <tuple> ] ?if ;
@@ -362,4 +373,4 @@ M: tuple-class boa
     [ tuple-layout ]
     bi <tuple-boa> ;
 
-M: tuple-class initial-value* new ;
+M: tuple-class initial-value* new t ;

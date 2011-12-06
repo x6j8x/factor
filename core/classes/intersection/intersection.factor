@@ -14,8 +14,8 @@ PREDICATE: intersection-class < class
     [
         [ drop t ]
     ] [
-        unclip "predicate" word-prop swap [
-            "predicate" word-prop [ dup ] [ not ] surround
+        unclip predicate-def swap [
+            predicate-def [ dup ] [ not ] surround
             [ drop f ]
         ] { } map>assoc alist>quot
     ] if-empty ;
@@ -29,6 +29,9 @@ M: intersection-class rank-class drop 5 ;
 
 M: intersection-class instance?
     "participants" word-prop [ instance? ] with all? ;
+
+M: anonymous-intersection instance?
+    participants>> [ instance? ] with all? ;
 
 M: intersection-class normalize-class
     participants <anonymous-intersection> normalize-class ;

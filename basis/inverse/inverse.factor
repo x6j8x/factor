@@ -225,7 +225,7 @@ DEFER: __
 \ prepend 1 [ [ ?head assure ] curry ] define-pop-inverse
 
 : assure-same-class ( obj1 obj2 -- )
-    [ class ] bi@ = assure ; inline
+    [ class-of ] bi@ = assure ; inline
 
 \ output>sequence 2 [ [undo] '[ dup _ assure-same-class _ input<sequence ] ] define-pop-inverse
 \ input<sequence 1 [ [undo] '[ _ { } output>sequence ] ] define-pop-inverse
@@ -244,7 +244,7 @@ DEFER: __
 
 ! Constructor inverse
 : deconstruct-pred ( class -- quot )
-    "predicate" word-prop [ dupd call assure ] curry ;
+    predicate-def [ dupd call assure ] curry ;
 
 : slot-readers ( class -- quot )
     all-slots [ name>> reader-word 1quotation ] map [ cleave ] curry ;

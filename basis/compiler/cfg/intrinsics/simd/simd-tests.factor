@@ -22,7 +22,7 @@ IN: compiler.cfg.intrinsics.simd.tests
     } ;
 
 :: test-node-literal ( lit rep -- node )
-    lit class :> lit-class
+    lit class-of :> lit-class
     T{ #call
         { in-d  { 1 2 3 4 } }
         { out-d { 5 } }
@@ -63,7 +63,7 @@ IN: compiler.cfg.intrinsics.simd.tests
         H{ } clone \ kill-sets pick set-at ;
 
 : make-classes ( quot -- seq )
-    { } make [ class ] map ; inline
+    { } make [ class-of ] map ; inline
 
 : test-emit ( cpu rep quot -- node )
     [
@@ -97,20 +97,21 @@ CONSTANT: all-reps
 TUPLE: scalar-cpu ;
 
 TUPLE: simple-ops-cpu ;
-M: simple-ops-cpu %zero-vector-reps  all-reps ;
-M: simple-ops-cpu %fill-vector-reps  all-reps ;
-M: simple-ops-cpu %add-vector-reps   all-reps ;
-M: simple-ops-cpu %sub-vector-reps   all-reps ;
-M: simple-ops-cpu %mul-vector-reps   all-reps ;
-M: simple-ops-cpu %div-vector-reps   all-reps ;
-M: simple-ops-cpu %andn-vector-reps  all-reps ;
-M: simple-ops-cpu %and-vector-reps   all-reps ;
-M: simple-ops-cpu %or-vector-reps    all-reps ;
-M: simple-ops-cpu %xor-vector-reps   all-reps ;
+M: simple-ops-cpu %zero-vector-reps all-reps ;
+M: simple-ops-cpu %fill-vector-reps all-reps ;
+M: simple-ops-cpu %add-vector-reps all-reps ;
+M: simple-ops-cpu %sub-vector-reps all-reps ;
+M: simple-ops-cpu %mul-vector-reps all-reps ;
+M: simple-ops-cpu %div-vector-reps all-reps ;
+M: simple-ops-cpu %andn-vector-reps all-reps ;
+M: simple-ops-cpu %and-vector-reps all-reps ;
+M: simple-ops-cpu %or-vector-reps all-reps ;
+M: simple-ops-cpu %xor-vector-reps all-reps ;
 M: simple-ops-cpu %merge-vector-reps all-reps ;
-M: simple-ops-cpu %sqrt-vector-reps  all-reps ;
+M: simple-ops-cpu %sqrt-vector-reps all-reps ;
+M: simple-ops-cpu %move-vector-mask-reps  all-reps ;
 M: simple-ops-cpu %test-vector-reps  all-reps ;
-M: simple-ops-cpu %signed-pack-vector-reps   all-reps ;
+M: simple-ops-cpu %signed-pack-vector-reps all-reps ;
 M: simple-ops-cpu %unsigned-pack-vector-reps all-reps ;
 M: simple-ops-cpu %gather-vector-2-reps { longlong-2-rep ulonglong-2-rep double-2-rep } ;
 M: simple-ops-cpu %gather-vector-4-reps { int-4-rep uint-4-rep float-4-rep } ;

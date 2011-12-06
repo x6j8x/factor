@@ -5,6 +5,12 @@ io.backend io.pathnames io.encodings io.files.private
 alien.strings ;
 IN: io.files
 
+MIXIN: file-reader
+MIXIN: file-writer
+
+M: file-reader stream-element-type drop +byte+ ; inline
+M: file-writer stream-element-type drop +byte+ ; inline
+
 HOOK: (file-reader) io-backend ( path -- stream )
 
 HOOK: (file-writer) io-backend ( path -- stream )
@@ -12,13 +18,13 @@ HOOK: (file-writer) io-backend ( path -- stream )
 HOOK: (file-appender) io-backend ( path -- stream )
 
 : <file-reader> ( path encoding -- stream )
-    swap normalize-path (file-reader) swap <decoder> ;
+    [ normalize-path (file-reader) { file-reader } declare ] dip <decoder> ; inline
 
 : <file-writer> ( path encoding -- stream )
-    swap normalize-path (file-writer) swap <encoder> ;
+    [ normalize-path (file-writer) { file-writer } declare ] dip <encoder> ; inline
 
 : <file-appender> ( path encoding -- stream )
-    swap normalize-path (file-appender) swap <encoder> ;
+    [ normalize-path (file-appender) { file-writer } declare ] dip <encoder> ; inline
 
 : file-lines ( path encoding -- seq )
     <file-reader> stream-lines ;
@@ -57,7 +63,7 @@ PRIVATE>
 
 [
     cwd current-directory set-global
-    13 special-object alien>native-string cwd prepend-path \ image set-global
-    14 special-object alien>native-string cwd prepend-path \ vm set-global
+    OBJ-IMAGE special-object alien>native-string cwd prepend-path \ image set-global
+    OBJ-EXECUTABLE special-object alien>native-string cwd prepend-path \ vm set-global
     image parent-directory "resource-path" set-global
 ] "io.files" add-startup-hook

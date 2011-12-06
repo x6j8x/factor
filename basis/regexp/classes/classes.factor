@@ -1,9 +1,9 @@
 ! Copyright (C) 2008, 2009 Doug Coleman, Daniel Ehrenberg.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: accessors kernel math math.order words combinators locals
-unicode.categories combinators.short-circuit sequences
-fry macros arrays assocs sets classes mirrors unicode.script
-unicode.data ;
+USING: accessors kernel math math.order words combinators
+combinators.smart combinators.short-circuit locals
+unicode.categories sequences fry macros arrays assocs sets
+classes unicode.script unicode.data ;
 FROM: ascii => ascii? ;
 FROM: sets => members ;
 IN: regexp.classes
@@ -96,7 +96,7 @@ M: hex-digit-class class-member? ( obj class -- ? )
 : java-blank? ( ch -- ? )
     {
         CHAR: \s CHAR: \t CHAR: \n
-        HEX: b HEX: 7 CHAR: \r
+        0xb 0x7 CHAR: \r
     } member? ;
 
 M: java-blank-class class-member? ( obj class -- ? )
@@ -168,7 +168,17 @@ TUPLE: class-partition integers not-integers simples not-simples and or other ;
     class-partition boa ;
 
 : class-partition>seq ( class-partition -- seq )
-    make-mirror values concat ;
+    [
+        {
+            [ integers>> ]
+            [ not-integers>> ]
+            [ simples>> ]
+            [ not-simples>> ]
+            [ and>> ]
+            [ or>> ]
+            [ other>> ]
+        } cleave
+    ] output>array concat ;
 
 : repartition ( partition -- partition' )
     ! This could be made more efficient; only and and or are effected

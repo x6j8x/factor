@@ -137,7 +137,7 @@ CONSTANT: button-clicked-background COLOR: FactorDarkSlateBlue
     dup label? [ [ clone t >>bold? ] change-font ] when drop ;
 
 : border-button-theme ( gadget -- gadget )
-    dup children>> first border-button-label-theme
+    dup gadget-child border-button-label-theme
     horizontal >>orientation
     <border-button-pen> >>interior
     dup dup interior>> pen-pref-dim >>min-dim
@@ -248,7 +248,7 @@ PRIVATE>
         1 >>fill
         { 5 5 } >>gap
         swap
-        [ [ "toolbar" ] dip class command-map commands>> ]
+        [ [ "toolbar" ] dip class-of command-map commands>> ]
         [ '[ [ _ ] 2dip <command-button> add-gadget ] ]
         bi assoc-each ;
 

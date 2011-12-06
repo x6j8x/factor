@@ -1,7 +1,7 @@
-! Copyright (C) 2005, 2010 Slava Pestov, Daniel Ehrenberg.
+! Copyright (C) 2005, 2011 Slava Pestov, Daniel Ehrenberg.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: accessors kernel kernel.private slots.private math
-math.private math.order ;
+USING: accessors kernel kernel.private math math.order
+math.private slots.private ;
 IN: sequences
 
 MIXIN: sequence
@@ -175,6 +175,10 @@ PRIVATE>
 : ?nth ( n seq -- elt/f )
     2dup bounds-check? [ nth-unsafe ] [ 2drop f ] if ; inline
 
+: ?first ( seq -- elt/f ) 0 swap ?nth ; inline
+: ?second ( seq -- elt/f ) 1 swap ?nth ; inline
+: ?last ( seq -- elt/f ) [ length 1 - ] [ ?nth ] bi ; inline
+
 MIXIN: virtual-sequence
 GENERIC: virtual-exemplar ( seq -- seq' )
 GENERIC: virtual@ ( n seq -- n' seq' )
@@ -220,10 +224,17 @@ TUPLE: slice-error from to seq reason ;
     [ drop > "start > end" slice-error ]
     3tri ; inline
 
+<PRIVATE
+
+: <slice-unsafe> ( from to seq -- slice )
+    slice boa ; inline
+
+PRIVATE>
+
 : <slice> ( from to seq -- slice )
     check-slice
     dup slice? [ collapse-slice ] when
-    slice boa ; inline
+    <slice-unsafe> ; inline
 
 M: slice virtual-exemplar seq>> ; inline
 
@@ -284,8 +295,11 @@ C: <copy> copy-state
     [ over - check-length swap ] dip
     3dup nip new-sequence 0 swap <copy> ; inline
 
+: bounds-check-head ( n seq -- n seq )
+    over 0 < [ bounds-error ] when ; inline
+
 : check-copy ( src n dst -- src n dst )
-    3dup over 0 < [ bounds-error ] when
+    3dup bounds-check-head
     [ swap length + ] dip lengthen ; inline
 
 PRIVATE>
@@ -315,7 +329,7 @@ M: sequence clone-like
 
 M: immutable-sequence clone-like like ; inline
 
-: push-all ( src dest -- ) [ length ] [ copy ] bi ;
+: push-all ( src dest -- ) [ length ] [ copy ] bi ; inline
 
 <PRIVATE
 
@@ -346,7 +360,7 @@ PRIVATE>
 
 : glue ( seq1 seq2 seq3 -- newseq ) swap 3append ; inline
 
-: change-nth ( i seq quot -- )
+: change-nth ( ..a i seq quot: ( ..a elt -- ..b newelt ) -- ..b )
     [ [ nth ] dip call ] 3keep drop set-nth ; inline
 
 : min-length ( seq1 seq2 -- n ) [ length ] bi@ min ; inline
@@ -403,8 +417,11 @@ PRIVATE>
     [ 2drop f f ]
     if ; inline
 
-: (accumulate) ( seq identity quot -- seq identity quot )
-    [ swap ] dip [ curry keep ] curry ; inline
+: (find-index) ( seq quot quot' -- i elt )
+    pick [ [ (each-index) ] dip call ] dip finish-find ; inline
+
+: (accumulate) ( seq identity quot -- identity seq quot )
+    swapd [ curry keep ] curry ; inline
 
 PRIVATE>
 
@@ -414,7 +431,7 @@ PRIVATE>
 : reduce ( ... seq identity quot: ( ... prev elt -- ... next ) -- ... result )
     swapd each ; inline
 
-: map-integers ( len quot exemplar -- newseq )
+: map-integers ( ... len quot: ( ... i -- ... elt ) exemplar -- ... newseq )
     [ over ] dip [ [ collect ] keep ] new-like ; inline
 
 : map-as ( ... seq quot: ( ... elt -- ... newelt ) exemplar -- ... newseq )
@@ -477,6 +494,9 @@ PRIVATE>
 : find-last ( ... seq quot: ( ... elt -- ... ? ) -- ... i elt )
     [ [ 1 - ] dip find-last-integer ] (find) ; inline
 
+: find-index ( ... seq quot: ( ... elt i -- ... ? ) -- ... i elt )
+    [ find-integer ] (find-index) ; inline
+
 : all? ( ... seq quot: ( ... elt -- ... ? ) -- ... ? )
     (each) all-integers? ; inline
 
@@ -522,7 +542,7 @@ PRIVATE>
 : each-index ( ... seq quot: ( ... elt index -- ... ) -- ... )
     (each-index) each-integer ; inline
 
-: interleave ( seq between quot -- )
+: interleave ( ... seq between quot: ( ... elt -- ... ) -- ... )
     pick empty? [ 3drop ] [
         [ [ drop first-unsafe ] dip call ]
         [ [ rest-slice ] 2dip [ bi* ] 2curry each ]
@@ -559,7 +579,7 @@ PRIVATE>
     [ [ (indices) ] 2curry each-index ] keep ;
 
 : nths ( indices seq -- seq' )
-    [ nth ] curry map ;
+    [ [ nth ] curry ] keep map-as ;
 
 : any? ( ... seq quot: ( ... elt -- ... ? ) -- ... ? )
     find drop >boolean ; inline
@@ -727,9 +747,11 @@ PRIVATE>
     [ exchange-unsafe ]
     3tri ;
 
+: midpoint@ ( seq -- n ) length 2/ ; inline
+
 : reverse! ( seq -- seq )
     [
-        [ length 2/ iota ] [ length ] [ ] tri
+        [ midpoint@ iota ] [ length ] [ ] tri
         [ [ over - 1 - ] dip exchange-unsafe ] 2curry each
     ] keep ;
 
@@ -802,8 +824,6 @@ PRIVATE>
 : insert-nth ( elt n seq -- seq' )
     swap cut-slice [ swap suffix ] dip append ;
 
-: midpoint@ ( seq -- n ) length 2/ ; inline
-
 : halves ( seq -- first-slice second-slice )
     dup midpoint@ cut-slice ;
 
@@ -866,9 +886,6 @@ PRIVATE>
 
 : unclip-slice ( seq -- rest-slice first )
     [ rest-slice ] [ first-unsafe ] bi ; inline
-
-: 2unclip-slice ( seq1 seq2 -- rest-slice1 rest-slice2 first1 first2 )
-    [ unclip-slice ] bi@ swapd ; inline
 
 : map-reduce ( ..a seq map-quot: ( ..a x -- ..b elt ) reduce-quot: ( ..b prev elt -- ..a next ) -- ..a result )
     [ [ unclip-slice ] dip [ call ] keep ] dip

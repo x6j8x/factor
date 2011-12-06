@@ -3,7 +3,7 @@
 USING: accessors arrays combinators compression.lzw
 constructors destructors grouping images images.loader io
 io.binary io.buffers io.encodings.string io.encodings.utf8
-io.ports kernel make math math.bitwise namespaces sequences ;
+kernel make math math.bitwise namespaces sequences ;
 IN: images.gif
 
 SINGLETON: gif-image
@@ -55,16 +55,16 @@ introducer label comment-data ;
 TUPLE: trailer byte ;
 CONSTRUCTOR: trailer ( byte -- obj ) ;
 
-CONSTANT: image-descriptor HEX: 2c
+CONSTANT: image-descriptor 0x2c
 ! Extensions
-CONSTANT: extension-identifier HEX: 21
-CONSTANT: plain-text-extension HEX: 01
-CONSTANT: graphic-control-extension HEX: f9
-CONSTANT: comment-extension HEX: fe
-CONSTANT: application-extension HEX: ff
-CONSTANT: trailer HEX: 3b
-CONSTANT: graphic-control-extension-block-size HEX: 04
-CONSTANT: block-terminator HEX: 00
+CONSTANT: extension-identifier 0x21
+CONSTANT: plain-text-extension 0x01
+CONSTANT: graphic-control-extension 0xf9
+CONSTANT: comment-extension 0xfe
+CONSTANT: application-extension 0xff
+CONSTANT: trailer 0x3b
+CONSTANT: graphic-control-extension-block-size 0x04
+CONSTANT: block-terminator 0x00
 
 : <loading-gif> ( -- loading-gif )
     \ loading-gif new
@@ -73,14 +73,6 @@ CONSTANT: block-terminator HEX: 00
         V{ } clone >>plain-text-extensions
         V{ } clone >>comment-extensions
         t >>loading? ;
-
-GENERIC: stream-peek1 ( stream -- byte )
-
-M: input-port stream-peek1
-    dup check-disposed dup wait-to-read
-    [ drop f ] [ buffer>> buffer-peek ] if ; inline
-
-: peek1 ( -- byte ) input-stream get stream-peek1 ;
 
 : (read-sub-blocks) ( -- )
     read1 [ read , (read-sub-blocks) ] unless-zero ;
@@ -148,7 +140,8 @@ ERROR: unimplemented message ;
 : sort? ( image -- ? ) flags>> 5 bit? ; inline
 : color-table-size ( image -- ? ) flags>> 3 bits 1 + 2^ 3 * ; inline
 : transparency? ( image -- ? )
-    graphic-control-extensions>> first flags>> 0 bit? ; inline
+    graphic-control-extensions>>
+    [ f ] [ first flags>> 0 bit? ] if-empty ; inline
 
 : color-resolution ( image -- ? ) flags>> -4 shift 3 bits ; inline
 

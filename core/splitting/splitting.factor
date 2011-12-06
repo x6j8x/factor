@@ -1,7 +1,6 @@
 ! Copyright (C) 2005, 2009 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: kernel math make strings arrays vectors sequences
-sets math.order accessors ;
+USING: arrays kernel make math sequences sets strings ;
 IN: splitting
 
 <PRIVATE
@@ -55,7 +54,7 @@ PRIVATE>
 
 <PRIVATE
 
-: (split) ( n seq quot: ( elt -- ? ) -- )
+: (split) ( n seq quot: ( ... elt -- ... ? ) -- )
     [ find-from drop ]
     [ [ [ 3dup swapd subseq , ] dip [ drop 1 + ] 2dip (split) ] 3curry ]
     [ drop [ swap [ tail ] unless-zero , ] 2curry ]
@@ -68,7 +67,7 @@ PRIVATE>
 : split ( seq separators -- pieces )
     [ [ member? ] curry split, ] { } make ;
 
-: split-when ( seq quot -- pieces )
+: split-when ( ... seq quot: ( ... elt -- ... ? ) -- ... pieces )
     [ split, ] { } make ; inline
 
 GENERIC: string-lines ( str -- seq )
