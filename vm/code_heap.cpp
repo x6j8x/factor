@@ -72,6 +72,31 @@ void code_heap::flush_icache()
 	factor::flush_icache(seg->start,seg->size);
 }
 
+struct clear_free_blocks_from_all_blocks_iterator
+{
+	code_heap *code;
+
+	clear_free_blocks_from_all_blocks_iterator(code_heap *code) : code(code) {}
+
+	void operator()(code_block *free_block, cell size) {
+		std::set<code_block*>::iterator erase_from =
+			code->all_blocks.lower_bound(free_block);
+		std::set<code_block*>::iterator erase_to =
+			code->all_blocks.lower_bound((code_block*)((char*)free_block + size));
+
+		code->all_blocks.erase(erase_from, erase_to);
+	}
+};
+
+void code_heap::sweep()
+{
+	clear_free_blocks_from_all_blocks_iterator clearer(this);
+	allocator->sweep(clearer);
+#ifdef FACTOR_DEBUG
+	verify_all_blocks_set();
+#endif
+}
+
 struct all_blocks_set_verifier {
 	std::set<code_block*> *leftovers;
 
@@ -94,16 +119,25 @@ void code_heap::verify_all_blocks_set()
 
 code_block *code_heap::code_block_for_address(cell address)
 {
-#ifdef FACTOR_DEBUG
-	verify_all_blocks_set();
-#endif
 	std::set<code_block*>::const_iterator blocki =
 		all_blocks.upper_bound((code_block*)address);
 	FACTOR_ASSERT(blocki != all_blocks.begin());
 	--blocki;
 	code_block* found_block = *blocki;
-	FACTOR_ASSERT((cell)found_block->entry_point() <= address
-		&& address - (cell)found_block->entry_point() < found_block->size());
+#ifdef FACTOR_DEBUG
+	if (!((cell)found_block->entry_point() <= address
+		&& address - (cell)found_block->entry_point() < found_block->size()))
+	{
+		std::cerr << "invalid block found in all_blocks set!" << std::endl;
+		std::cerr << "address " << (void*)address
+			<< " block " << (void*)found_block
+			<< " entry point " << (void*)found_block->entry_point()
+			<< " size " << found_block->size()
+			<< " free? " << found_block->free_p();
+		verify_all_blocks_set();
+		FACTOR_ASSERT(false);
+	}
+#endif
 	return found_block;
 }
 
@@ -123,19 +157,6 @@ void code_heap::initialize_all_blocks_set()
 	all_blocks.clear();
 	all_blocks_set_inserter inserter(this);
 	allocator->iterate(inserter);
-}
-
-void code_heap::update_all_blocks_set(mark_bits<code_block> *code_forwarding_map)
-{
-	std::set<code_block *> new_all_blocks;
-	for (std::set<code_block *>::const_iterator oldi = all_blocks.begin();
-		oldi != all_blocks.end();
-		++oldi)
-	{
-		code_block *new_block = code_forwarding_map->forward_block(*oldi);
-		new_all_blocks.insert(new_block);
-	}
-	all_blocks.swap(new_all_blocks);
 }
 
 /* Allocate a code heap during startup */
