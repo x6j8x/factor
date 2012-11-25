@@ -14,11 +14,13 @@
 !     * REMOTE_ADDR
 
 USING: accessors alien.enums alien.syntax assocs combinators
-combinators.smart formatting http http.server http.server.responses
-io io.binary io.directories
+combinators.smart formatting http http.server
+http.server.responses io io.binary io.directories
 io.encodings.binary io.files io.servers io.sockets
-io.streams.byte-array kernel locals math namespaces pack prettyprint
-sequences sequences.deep strings threads urls.encoding unix.users ;
+io.streams.byte-array kernel locals math namespaces pack
+prettyprint sequences sequences.deep strings threads
+urls.encoding ;
+
 IN: fastcgi
 
 SYMBOL: fcgi-server
@@ -61,7 +63,7 @@ ENUM: fcgi-protocol-status
     FCGI_UNKNOWN_ROLE ;
 
 :: debug-print ( print-quot -- )
-    global [ print-quot call flush ] bind ; inline
+    [ print-quot call flush ] with-global ; inline
 
 ! read either a 1 byte or 4 byte big endian integer
 : read-var-int ( -- n/f )

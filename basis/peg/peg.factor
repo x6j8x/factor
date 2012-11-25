@@ -12,7 +12,7 @@ TUPLE: parse-result remaining ast ;
 TUPLE: parse-error position messages ; 
 TUPLE: parser peg compiled id ;
 
-M: parser equal?    { [ [ class-of ] bi@ = ] [ [ id>> ] bi@ = ] } 2&& ;
+M: parser equal?    { [ [ class-of ] same? ] [ [ id>> ] same? ] } 2&& ;
 M: parser hashcode* id>> hashcode* ;
 
 C: <parse-result> parse-result
@@ -240,17 +240,15 @@ TUPLE: peg-head rule-id involved-set eval-set ;
    ] if* ; inline
 
 : with-packrat ( input quot -- result )
-  #! Run the quotation with a packrat cache active.
-  [ 
-    swap input set
-    0 pos set
-    f lrstack set
-    V{ } clone error-stack set
-    H{ } clone \ heads set
-    H{ } clone \ packrat set
-    call
-  ] with-scope ; inline
-
+    #! Run the quotation with a packrat cache active.
+    [
+        swap input ,,
+        0 pos ,,
+        f lrstack ,,
+        V{ } clone error-stack ,,
+        H{ } clone \ heads ,,
+        H{ } clone \ packrat ,,
+    ] H{ } make swap with-variables ; inline
 
 GENERIC: (compile) ( peg -- quot )
 

@@ -9,7 +9,7 @@ compiler.tree.debugger compiler.tree.checker slots.private words
 hashtables classes assocs locals specialized-arrays system
 sorting math.libm math.floats.private math.integers.private
 math.intervals quotations effects alien alien.data sets
-strings.private vocabs ;
+strings.private vocabs generic.single ;
 FROM: math => float ;
 SPECIALIZED-ARRAY: double
 SPECIALIZED-ARRAY: void*
@@ -1008,12 +1008,12 @@ M: tuple-with-read-only-slot clone
 ] unit-test
 
 [ t ] [
-    [ maybe: integer instance? ] { instance? } inlined?
+    [ maybe{ integer } instance? ] { instance? } inlined?
 ] unit-test
 
 TUPLE: inline-please a ;
 [ t ] [
-    [ maybe: inline-please instance? ] { instance? } inlined?
+    [ maybe{ inline-please } instance? ] { instance? } inlined?
 ] unit-test
 
 GENERIC: derp ( obj -- obj' )
@@ -1023,5 +1023,21 @@ M: f derp drop t ;
 
 [ t ]
 [
-    [ dup maybe: integer instance? [ derp ] when ] { instance? } inlined?
+    [ dup maybe{ integer } instance? [ derp ] when ] { instance? } inlined?
 ] unit-test
+
+! Type-check ratios with bitand operators
+
+: bitand-ratio0 ( x -- y )
+    1 bitand zero? ;
+
+: bitand-ratio1 ( x -- y )
+    1 swap bitand zero? ;
+
+[ 2+1/2 bitand-ratio0 ] [ no-method? ] must-fail-with 
+[ 2+1/2 bitand-ratio1 ] [ no-method? ] must-fail-with
+
+: shift-test0 ( x -- y )
+    4.3 shift ;
+
+[ 1 shift-test0 ] [ no-method? ] must-fail-with

@@ -4,11 +4,12 @@ USING: byte-arrays math io.backend io.files.info
 io.files.windows kernel windows.kernel32
 windows.time windows.types windows accessors alien.c-types
 combinators generalizations system alien.strings
-io.encodings.utf16n sequences splitting windows.errors fry
+sequences splitting windows.errors fry
 continuations destructors calendar ascii
 combinators.short-circuit literals locals classes.struct
-specialized-arrays alien.data ;
+specialized-arrays alien.data libc windows.shell32 ;
 SPECIALIZED-ARRAY: ushort
+QUALIFIED: sequences
 IN: io.files.info.windows
 
 :: round-up-to ( n multiple -- n' )
@@ -95,13 +96,38 @@ M: windows file-info ( path -- info )
 M: windows link-info ( path -- info )
     file-info ;
 
+: file-executable-type ( path -- executable/f )
+    normalize-path dup
+    0
+    f
+    ! hi is zero means old style executable
+    0 SHGFI_EXETYPE SHGetFileInfoW
+    [
+        file-info drop f
+    ] [
+        nip >lo-hi first2 zero? [
+            {
+                { 0x5A4D [ +dos-executable+ ] }
+                { 0x4550 [ +win32-console-executable+ ] }
+                [ drop f ]
+            } case
+        ] [
+            {
+                { 0x454C [ +win32-vxd-executable+ ] }
+                { 0x454E [ +win32-os2-executable+ ] }
+                { 0x4550 [ +win32-nt-executable+ ] }
+                [ drop f ]
+            } case
+        ] if
+    ] if-zero ;
+
 CONSTANT: path-length $[ MAX_PATH 1 + ]
 
 : volume-information ( normalized-path -- volume-name volume-serial max-component flags type )
     { { ushort path-length } DWORD DWORD DWORD { ushort path-length } }
     [ [ path-length ] 4dip path-length GetVolumeInformation win32-error=0/f ]
     with-out-parameters
-    [ utf16n alien>string ] 4dip utf16n alien>string ;
+    [ alien>native-string ] 4dip alien>native-string ;
 
 : file-system-space ( normalized-path -- available-space total-space free-space )
     { ULARGE_INTEGER ULARGE_INTEGER ULARGE_INTEGER }
@@ -146,16 +172,10 @@ M: windows file-system-info ( path -- file-system-info )
 
 CONSTANT: names-buf-length 16384
 
-: volume>paths ( string -- array )
-    { { ushort names-buf-length } uint }
-    [ [ names-buf-length ] dip GetVolumePathNamesForVolumeName win32-error=0/f ]
-    with-out-parameters
-    head utf16n alien>string { CHAR: \0 } split ;
-
 : find-first-volume ( -- string handle )
     { { ushort path-length } }
     [ path-length FindFirstVolume dup win32-error=0/f ]
-    with-out-parameters utf16n alien>string swap ;
+    with-out-parameters alien>native-string swap ;
 
 : find-next-volume ( handle -- string/f )
     { { ushort path-length } }
@@ -163,7 +183,7 @@ CONSTANT: names-buf-length 16384
     swap 0 = [
         GetLastError ERROR_NO_MORE_FILES =
         [ drop f ] [ win32-error-string throw ] if
-    ] [ utf16n alien>string ] if ;
+    ] [ alien>native-string ] if ;
 
 : find-volumes ( -- array )
     find-first-volume
@@ -174,12 +194,25 @@ CONSTANT: names-buf-length 16384
         ]
     ] [ '[ _ FindVolumeClose win32-error=0/f ] ] bi [ ] cleanup ;
 
+! Windows may return a volume which looks up to path ""
+! For now, treat it like there is not a volume here
+: volume>paths ( string -- array )
+    [
+        names-buf-length
+        [ ushort malloc-array &free ] keep
+        0 uint <ref>
+        [ GetVolumePathNamesForVolumeName win32-error=0/f ] 3keep nip
+        uint deref head but-last-slice
+        { 0 } split* 
+        [ { } ] [ [ alien>native-string ] map ] if-empty
+    ] with-destructors ;
+
+! Can error with T{ windows-error f 21 "The device is not ready." }
+! if there is a D: that is not ready, for instance. Ignore these drives.
 M: windows file-systems ( -- array )
-    find-volumes [ volume>paths ] map
-    concat [
-        [ (file-system-info) ]
-        [ drop \ file-system-info new swap >>mount-point ] recover
-    ] map ;
+    find-volumes [ volume>paths ] map concat [
+        [ (file-system-info) ] [ 2drop f ] recover
+    ] map sift ;
 
 : file-times ( path -- timestamp timestamp timestamp )
     [
@@ -206,3 +239,7 @@ M: windows file-systems ( -- array )
 
 : set-file-write-time ( path timestamp -- )
     [ f f ] dip set-file-times ;
+
+M: windows file-readable? file-info >boolean ;
+M: windows file-writable? file-info attributes>> +read-only+ swap member? not ;
+M: windows file-executable? file-executable-type windows-executable? ;

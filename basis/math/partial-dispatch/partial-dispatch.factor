@@ -1,9 +1,10 @@
 ! Copyright (C) 2008 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: accessors kernel kernel.private math math.private words
-sequences parser namespaces make assocs quotations arrays
-generic generic.math hashtables effects compiler.units
-classes.algebra fry combinators ;
+USING: accessors kernel kernel.private math math.private
+math.functions math.functions.private sequences parser
+namespaces make assocs quotations arrays generic generic.math
+hashtables effects compiler.units classes.algebra fry
+combinators words ;
 IN: math.partial-dispatch
 
 PREDICATE: math-partial < word
@@ -128,7 +129,7 @@ M: word integer-op-input-classes
 : define-math-ops ( op -- )
     { fixnum bignum float }
     [ [ dup 3array ] [ swap ?lookup-method ] 2bi ] with { } map>assoc
-    [ nip ] assoc-filter
+    sift-values
     [ def>> ] assoc-map
     [ nip length 1 = ] assoc-filter
     [ first ] assoc-map % ;
@@ -146,7 +147,7 @@ SYMBOL: fast-math-ops
 
 : math-both-known? ( word left right -- ? )
     3dup math-op
-    [ 2drop 2drop t ]
+    [ 4drop t ]
     [ drop math-class-max swap method-for-class >boolean ] if ;
 
 : (derived-ops) ( word assoc -- words )
@@ -214,6 +215,8 @@ SYMBOL: fast-math-ops
         \ shift \ fixnum-shift \ bignum-shift define-integer-ops
         \ mod \ fixnum-mod \ bignum-mod define-integer-ops
         \ /i \ fixnum/i \ bignum/i define-integer-ops
+
+        \ fast-gcd \ simple-gcd \ bignum-gcd define-integer-ops
 
         \ bitand \ fixnum-bitand \ bignum-bitand define-integer-ops
         \ bitor \ fixnum-bitor \ bignum-bitor define-integer-ops

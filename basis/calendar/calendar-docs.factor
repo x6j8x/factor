@@ -29,7 +29,7 @@ HELP: <date>
 HELP: month-names
 { $values { "value" object } }
 { $description "Returns an array with the English names of all the months." }
-{ $warning "Do not use this array for looking up a month name directly. Use month-name instead." } ;
+{ $warning "Do not use this array for looking up a month name directly. Use " { $link month-name } " instead." } ;
 
 HELP: month-name
 { $values { "obj" { $or integer timestamp } } { "string" string } }
@@ -38,7 +38,7 @@ HELP: month-name
 HELP: month-abbreviations
 { $values { "value" array } }
 { $description "Returns an array with the English abbreviated names of all the months." }
-{ $warning "Do not use this array for looking up a month name directly. Use month-abbreviation instead." } ;
+{ $warning "Do not use this array for looking up a month name directly. Use " { $link month-abbreviation } " instead." } ;
 
 HELP: month-abbreviation
 { $values { "n" integer } { "string" string } }
@@ -323,7 +323,7 @@ HELP: >local-time
 { $description "Converts the " { $snippet "timestamp" } " to the timezone of your computer." }
 { $examples
     { $example "USING: accessors calendar kernel prettyprint ;"
-               "now gmt >local-time [ gmt-offset>> ] bi@ = ."
+               "now gmt >local-time [ gmt-offset>> ] same? ."
                "t"
     }
 } ;
@@ -490,11 +490,15 @@ HELP: saturday
 
 HELP: midnight
 { $values { "timestamp" timestamp } { "new-timestamp" timestamp } }
-{ $description "Returns a new timestamp that represents today at midnight, or the beginning of the day." } ;
+{ $description "Returns a new timestamp that represents the day at midnight, or the beginning of the day." } ;
 
 HELP: noon
 { $values { "timestamp" timestamp } { "new-timestamp" timestamp } }
-{ $description "Returns a new timestamp that represents today at noon, or the middle of the day." } ;
+{ $description "Returns a new timestamp that represents the day at noon, or the middle of the day." } ;
+
+HELP: today
+{ $values { "timestamp" timestamp } }
+{ $description "Returns a timestamp that represents today at midnight." } ;
 
 HELP: beginning-of-month
 { $values { "timestamp" timestamp } { "new-timestamp" timestamp } }

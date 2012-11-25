@@ -5,7 +5,7 @@ USING: accessors alien alien.c-types alien.data alien.parser
 arrays byte-arrays classes classes.parser classes.private
 classes.struct.bit-accessors classes.tuple classes.tuple.parser
 combinators combinators.smart cpu.architecture definitions fry
-functors.backend generalizations generic generic.parser kernel
+functors.backend generalizations generic generic.parser io kernel
 kernel.private lexer libc locals macros math math.order parser
 quotations sequences slots slots.private specialized-arrays
 stack-checker.dependencies summary vectors vocabs.loader
@@ -52,7 +52,7 @@ M: struct >c-ptr
 
 M: struct equal?
     over struct? [
-        2dup [ class-of ] bi@ = [
+        2dup [ class-of ] same? [
             2dup [ >c-ptr ] both?
             [ [ >c-ptr ] [ binary-object ] bi* memory= ]
             [ [ >c-ptr not ] both? ]
@@ -70,6 +70,9 @@ M: struct hashcode*
     ! This is sub-optimal if the class is not literal, but gets
     ! optimized down to efficient code if it is.
     '[ _ boa ] call( ptr -- struct ) ; inline
+
+: read-struct ( class -- struct )
+    [ heap-size read ] [ memory>struct ] bi ;
 
 <PRIVATE
 : (init-struct) ( class with-prototype: ( prototype -- alien ) sans-prototype: ( class -- alien ) -- alien )
@@ -136,11 +139,11 @@ M: struct-bit-slot-spec (writer-quot)
     drop [ >c-ptr ] ;
 
 MACRO: read-struct-slot ( slot -- )
-    dup type>> depends-on-c-type
+    dup type>> add-depends-on-c-type
     (reader-quot) ;
 
 MACRO: write-struct-slot ( slot -- )
-    dup type>> depends-on-c-type
+    dup type>> add-depends-on-c-type
     (writer-quot) ;
 PRIVATE>
 
@@ -247,7 +250,7 @@ M: struct-bit-slot-spec compute-slot-offset
 
 PRIVATE>
 
-M: struct byte-length class-of "struct-size" word-prop ; foldable
+M: struct byte-length class-of "struct-size" word-prop ; inline foldable
 M: struct binary-zero? binary-object uchar <c-direct-array> [ 0 = ] all? ; inline
 
 ! class definition
@@ -336,16 +339,10 @@ SYMBOL: bits:
 
 <PRIVATE
 
-ERROR: bad-type-for-bits type ;
-
 :: set-bits ( slot-spec n -- slot-spec )
     struct-bit-slot-spec new
         n >>bits
-        slot-spec type>> {
-            { int [ t ] }
-            { uint [ f ] }
-            [ bad-type-for-bits ]
-        } case >>signed?
+        slot-spec type>> c-type-signed >>signed?
         slot-spec name>> >>name
         slot-spec class>> >>class
         slot-spec type>> >>type

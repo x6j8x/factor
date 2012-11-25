@@ -19,7 +19,7 @@ M: object eql? eq? ;
 M: fixnum eql? eq? ;
 M: bignum eql? over bignum? [ = ] [ 2drop f ] if ;
 M: ratio eql? over ratio? [ = ] [ 2drop f ] if ;
-M: float eql? over float? [ [ double>bits ] bi@ = ] [ 2drop f ] if ;
+M: float eql? over float? [ [ double>bits ] same? ] [ 2drop f ] if ;
 M: complex eql? over complex? [ = ] [ 2drop f ] if ;
 
 ! Value info represents a set of objects. Don't mutate value infos
@@ -47,7 +47,7 @@ CONSTANT: object-info T{ value-info f object full-interval }
             { [ over interval-length 0 > ] [ 3drop f f ] }
             { [ pick bignum class<= ] [ 2nip >bignum t ] }
             { [ pick integer class<= ] [ 2nip >fixnum t ] }
-            { [ pick float class<= ] [ 2nip dup zero? [ drop f f ] [ >float t ] if ] }
+            { [ pick float class<= ] [ 2nip [ f f ] [ >float t ] if-zero ] }
             [ 3drop f f ]
         } cond
     ] if ;
@@ -200,7 +200,7 @@ DEFER: (value-info-intersect)
         { [ dup not ] [ drop ] }
         { [ over not ] [ nip ] }
         [
-            2dup [ length ] bi@ =
+            2dup [ length ] same?
             [ [ intersect-slot ] 2map ] [ 2drop f ] if
         ]
     } cond ;
@@ -240,7 +240,7 @@ DEFER: (value-info-union)
 
 : union-slots ( info1 info2 -- slots )
     [ slots>> ] bi@
-    2dup [ length ] bi@ =
+    2dup [ length ] same?
     [ [ union-slot ] 2map ] [ 2drop f ] if ;
 
 : (value-info-union) ( info1 info2 -- info )

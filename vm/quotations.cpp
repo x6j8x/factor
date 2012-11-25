@@ -89,7 +89,8 @@ bool quotation_jit::special_subprimitive_p(cell obj)
 	return obj == parent->special_objects[SIGNAL_HANDLER_WORD]
 		|| obj == parent->special_objects[LEAF_SIGNAL_HANDLER_WORD]
 		|| obj == parent->special_objects[FFI_SIGNAL_HANDLER_WORD]
-		|| obj == parent->special_objects[FFI_LEAF_SIGNAL_HANDLER_WORD];
+		|| obj == parent->special_objects[FFI_LEAF_SIGNAL_HANDLER_WORD]
+		|| obj == parent->special_objects[UNWIND_NATIVE_FRAMES_WORD];
 }
 
 bool quotation_jit::word_stack_frame_p(cell obj)
@@ -239,7 +240,7 @@ void quotation_jit::iterate_quotation()
 				push(obj.value());
 			break;
 		case QUOTATION_TYPE:
-			/* 'if' preceeded by two literal quotations (this is why if and ? are
+			/* 'if' preceded by two literal quotations (this is why if and ? are
 			   mutually recursive in the library, but both still work) */
 			if(fast_if_p(i,length))
 			{
@@ -280,11 +281,15 @@ void quotation_jit::iterate_quotation()
 			/* Method dispatch */
 			if(mega_lookup_p(i,length))
 			{
+				fixnum index = untag_fixnum(array_nth(elements.untagged(),i + 1));
+				/* Load the object from the datastack, then remove our stack frame. */
+				emit_with_literal(parent->special_objects[PIC_LOAD],tag_fixnum(-index * sizeof(cell)));
 				emit_epilog(safepoint, stack_frame);
 				tail_call = true;
+
 				emit_mega_cache_lookup(
 					array_nth(elements.untagged(),i),
-					untag_fixnum(array_nth(elements.untagged(),i + 1)),
+					index,
 					array_nth(elements.untagged(),i + 2));
 				i += 3;
 			}
@@ -356,6 +361,7 @@ void *factor_vm::lazy_jit_compile_entry_point()
 	return untag<word>(special_objects[LAZY_JIT_COMPILE_WORD])->entry_point;
 }
 
+/* Allocates memory */
 /* push a new quotation on the stack */
 void factor_vm::primitive_array_to_quotation()
 {
@@ -369,9 +375,10 @@ void factor_vm::primitive_array_to_quotation()
 	ctx->replace(tag<quotation>(quot));
 }
 
+/* Allocates memory (from_unsigned_cell) */
 void factor_vm::primitive_quotation_code()
 {
-	quotation *quot = untag_check<quotation>(ctx->pop());
+	data_root<quotation> quot(ctx->pop(),this);
 
 	ctx->push(from_unsigned_cell((cell)quot->entry_point));
 	ctx->push(from_unsigned_cell((cell)quot->code() + quot->code()->size()));

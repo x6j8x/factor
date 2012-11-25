@@ -57,7 +57,7 @@ TUPLE: cookie name value version comment path domain expires max-age http-only s
             swap {
                 { "version" [ >>version ] }
                 { "comment" [ >>comment ] }
-                { "expires" [ cookie-string>timestamp >>expires ] }
+                { "expires" [ [ cookie-string>timestamp >>expires ] unless-empty ] }
                 { "max-age" [ string>number seconds >>max-age ] }
                 { "domain" [ >>domain ] }
                 { "path" [ >>path ] }
@@ -144,8 +144,8 @@ redirects ;
     pick header>> set-at ;
 
 : set-basic-auth ( request username password -- request )
-    ":" glue >base64 "Basic " prepend "Authorization" set-header ;
-    
+    ":" glue >base64 "Basic " "" prepend-as "Authorization" set-header ;
+
 : <request> ( -- request )
     request new
         "1.1" >>version

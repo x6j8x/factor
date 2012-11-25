@@ -4,7 +4,7 @@ USING: accessors arrays assocs calendar combinators locals
 source-files.errors colors.constants combinators.short-circuit
 compiler.units help.tips concurrency.flags concurrency.mailboxes
 continuations destructors documents documents.elements fry hashtables
-help help.markup io io.styles kernel lexer listener math models sets
+help help.markup io io.styles kernel lexer listener make math models sets
 models.delay models.arrow namespaces parser prettyprint quotations
 sequences strings threads vocabs vocabs.refresh vocabs.loader
 vocabs.parser words debugger ui ui.commands ui.pens.solid ui.gadgets
@@ -62,8 +62,11 @@ M: word-completion (word-at-caret)
         '[ _ _ search-manifest ] [ drop f ] recover
     ] [ 2drop f ] if ;
 
-M: char-completion (word-at-caret)
-    2drop f ;
+M: char-completion (word-at-caret) 2drop f ;
+
+M: path-completion (word-at-caret) 2drop f ;
+
+M: color-completion (word-at-caret) 2drop f ;
 
 : word-at-caret ( token interactor -- obj )
     completion-mode (word-at-caret) ;
@@ -103,9 +106,9 @@ M: input (print-input)
 M: word (print-input)
     "Command: "
     [
-        "sans-serif" font-name set
-        bold font-style set
-    ] H{ } make-assoc format . ;
+        "sans-serif" font-name ,,
+        bold font-style ,,
+    ] H{ } make format . ;
 
 : print-input ( object interactor -- )
     output>> [ (print-input) ] with-output-stream* ;
@@ -166,6 +169,15 @@ M: interactor stream-read1
         { [ dup first empty? ] [ 2drop CHAR: \n ] }
         [ nip first first ]
     } cond ;
+
+M: interactor stream-read-until ( seps stream -- seq sep/f )
+    swap '[
+        _ interactor-read [
+            "\n" join CHAR: \n suffix
+            [ _ member? ] dupd find
+            [ [ head ] when* ] dip dup not
+        ] [ f f f ] if*
+    ] [ drop ] produce swap [ concat "" prepend-as ] dip ;
 
 M: interactor dispose drop ;
 
@@ -449,3 +461,23 @@ M: listener-gadget graft*
 
 M: listener-gadget ungraft*
     [ com-end ] [ call-next-method ] bi ;
+
+<PRIVATE
+
+:: make-font-style ( family size -- assoc )
+    H{ } clone
+        family font-name pick set-at
+        size font-size pick set-at ;
+
+PRIVATE>
+
+:: set-listener-font ( family size -- )
+    get-listener input>> :> inter
+    family size make-font-style
+    inter output>> make-span-stream :> ostream
+    ostream inter output<<
+    inter font>> clone
+        family >>name
+        size >>size
+    inter font<<
+    ostream output-stream set ;

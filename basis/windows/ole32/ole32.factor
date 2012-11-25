@@ -122,14 +122,14 @@ TUPLE: ole32-error code message ;
 : <ole32-error> ( code -- error )
     dup n>win32-error-string \ ole32-error boa ;
 
-: ole32-error ( hresult -- )
+: check-ole32-error ( hresult -- )
     dup succeeded? [ drop ] [ <ole32-error> throw ] if ;
 
 : ole-initialize ( -- )
-    f OleInitialize ole32-error ;
+    f OleInitialize check-ole32-error ;
 
 : guid= ( a b -- ? )
-    [ 16 memory>byte-array ] bi@ = ;
+    [ 16 memory>byte-array ] same? ;
 
 CONSTANT: GUID-STRING-LENGTH
     $[ "{01234567-89ab-cdef-0123-456789abcdef}" length ]

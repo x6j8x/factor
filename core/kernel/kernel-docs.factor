@@ -11,9 +11,11 @@ HELP: eq?
 HELP: drop  $shuffle ;
 HELP: 2drop $shuffle ;
 HELP: 3drop $shuffle ;
+HELP: 4drop $shuffle ;
 HELP: dup   $shuffle ;
 HELP: 2dup  $shuffle ;
 HELP: 3dup  $shuffle ;
+HELP: 4dup  $shuffle ;
 HELP: nip   $shuffle ;
 HELP: 2nip  $shuffle ;
 HELP: over  $shuffle ;
@@ -182,6 +184,14 @@ HELP: either?
 { $examples
     { $example "USING: kernel math prettyprint ;" "3 6 [ odd? ] either? ." "t" }
     { $example "USING: kernel math prettyprint ;" "5 7 [ even? ] either? ." "f" }
+} ;
+
+HELP: same?
+{ $values { "x" object } { "y" object } { "quot" { $quotation "( ... obj -- ... obj' )" } } { "?" "a boolean" } }
+{ $description "Applies the quotation to both " { $snippet "x" } " and " { $snippet "y" } ", and then checks if the results are equal." }
+{ $examples
+    { $example "USING: kernel math prettyprint ;" "4 5 [ 2/ ] same? ." "t" }
+    { $example "USING: kernel math prettyprint ;" "3 7 [ sq ] same? ." "f" }
 } ;
 
 HELP: execute
@@ -768,7 +778,8 @@ HELP: with
 }
 { $notes "This operation is efficient and does not copy the quotation." }
 { $examples
-    { $example "USING: kernel math prettyprint sequences ;" "2 { 1 2 3 } [ - ] with map ." "{ 1 0 -1 }" }
+    { $example "USING: kernel math prettyprint sequences ;" "1 { 1 2 3 } [ / ] with map ." "{ 1 1/2 1/3 }" }
+    { $example "USING: kernel math prettyprint sequences ;" "1000 100 5 iota [ sq + + ] with with map ." "{ 1100 1101 1104 1109 1116 }" }
 } ;
 
 HELP: compose

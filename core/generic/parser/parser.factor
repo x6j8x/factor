@@ -29,10 +29,10 @@ SYMBOL: current-method
     "method-generic" word-prop "declared-effect" word-prop ;
 
 : method-effect= ( method-effect generic-effect -- ? )
-    [ [ in>> length ] bi@ = ]
+    [ [ in>> length ] same? ]
     [
         over terminated?>>
-        [ 2drop t ] [ [ out>> length ] bi@ = ] if
+        [ 2drop t ] [ [ out>> length ] same? ] if
     ] 2bi and ;
 
 ERROR: bad-method-effect ;
@@ -54,4 +54,6 @@ ERROR: bad-method-effect ;
 PRIVATE>
 
 : (M:) ( -- method def )
-    scan-new-method [ parse-method-definition ] with-method-definition ;
+    [
+        scan-new-method [ parse-method-definition ] with-method-definition
+    ] with-definition ;

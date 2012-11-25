@@ -5,7 +5,13 @@ io vectors arrays math.parser combinators continuations
 source-files.errors ;
 IN: lexer
 
-TUPLE: lexer text line line-text line-length column parsing-words ;
+TUPLE: lexer
+{ text array }
+{ line fixnum }
+{ line-text maybe{ string } }
+{ line-length fixnum }
+{ column fixnum }
+{ parsing-words vector } ;
 
 TUPLE: lexer-parsing-word word line line-text column ;
 
@@ -153,7 +159,7 @@ M: lexer-error error-line [ error>> error-line ] [ line>> ] bi or ;
     simple-lexer-dump ;
 
 : parsing-word-lexer-dump ( error parsing-word -- )
-    2dup [ line>> ] bi@ =
+    2dup [ line>> ] same?
     [ drop simple-lexer-dump ]
     [ (parsing-word-lexer-dump) ] if ;
 

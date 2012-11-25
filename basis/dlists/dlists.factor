@@ -6,11 +6,13 @@ deques fry hashtables kernel parser search-deques sequences
 summary vocabs.loader ;
 IN: dlists
 
-TUPLE: dlist-link { prev maybe: dlist-link } { next maybe: dlist-link } ;
+TUPLE: dlist-link { prev maybe{ dlist-link } } { next maybe{ dlist-link } } ;
 
 TUPLE: dlist-node < dlist-link obj ;
 
 M: dlist-link obj>> ;
+
+M: dlist-link node-value obj>> ;
 
 : new-dlist-link ( obj prev next class -- node )
     new
@@ -18,12 +20,12 @@ M: dlist-link obj>> ;
         swap >>prev
         swap >>obj ; inline
 
-: <dlist-node> ( obj prev next -- node )
+: <dlist-node> ( obj prev next -- dlist-node )
     \ dlist-node new-dlist-link ; inline
 
 TUPLE: dlist
-{ front maybe: dlist-link }
-{ back maybe: dlist-link } ;
+{ front maybe{ dlist-link } }
+{ back maybe{ dlist-link } } ;
 
 : <dlist> ( -- list )
     dlist new ; inline
@@ -33,23 +35,11 @@ TUPLE: dlist
 
 M: dlist deque-empty? front>> not ; inline
 
-M: dlist-node node-value obj>> ;
-
-<PRIVATE
-
-: dlist-nodes= ( dlist-node/f dlist-node/f -- ? )
-    {
-        [ [ dlist-node? ] both? ]
-        [ [ obj>> ] bi@ = ] 
-    } 2&& ; inline
-
-PRIVATE>
-
 M: dlist equal?
     over dlist? [
         [ front>> ] bi@
-        [ 2dup dlist-nodes= ]
-        [ [ next>> ] bi@ ] while 
+        [ 2dup { [ and ] [ [ obj>> ] same? ] } 2&& ]
+        [ [ next>> ] bi@ ] while
         or not
     ] [
         2drop f
@@ -105,12 +95,12 @@ M: dlist push-front* ( obj dlist -- dlist-node )
     [ front<< ] keep
     set-back-to-front ;
 
-: push-node-front ( node dlist -- )
+: push-node-front ( dlist-node dlist -- )
     [ front>> >>next drop ]
     [ front<< ]
     [ [ set-next-prev ] [ set-back-to-front ] bi* ] 2tri ;
 
-: push-node-back ( node dlist -- )
+: push-node-back ( dlist-node dlist -- )
     [ back>> >>prev drop ]
     [ back<< ]
     [ [ set-prev-next ] [ set-front-to-back ] bi* ] 2tri ;
@@ -187,10 +177,10 @@ M: dlist clear-deque ( dlist -- )
 : dlist-each ( ... dlist quot: ( ... value -- ... ) -- ... )
     '[ obj>> @ ] dlist-each-node ; inline
 
-: dlist>seq ( dlist -- seq )
+: dlist>sequence ( dlist -- seq )
     [ ] collector [ dlist-each ] dip ;
 
-: seq>dlist ( seq -- dlist )
+: >dlist ( seq -- dlist )
     <dlist> [ '[ _ push-back ] each ] keep ;
 
 : 1dlist ( obj -- dlist ) <dlist> [ push-front ] keep ;
@@ -204,6 +194,6 @@ M: dlist clone
 
 INSTANCE: dlist deque
 
-SYNTAX: DL{ \ } [ seq>dlist ] parse-literal ;
+SYNTAX: DL{ \ } [ >dlist ] parse-literal ;
 
 { "dlists" "prettyprint" } "dlists.prettyprint" require-when

@@ -22,16 +22,16 @@ IN: tools.deploy.macosx
 
 : app-plist ( icon? executable bundle-name -- assoc )
     [
-        "6.0" "CFBundleInfoDictionaryVersion" set
-        "APPL" "CFBundlePackageType" set
+        "6.0" "CFBundleInfoDictionaryVersion" ,,
+        "APPL" "CFBundlePackageType" ,,
 
-        file-name "CFBundleName" set
+        file-name "CFBundleName" ,,
 
-        [ "CFBundleExecutable" set ]
-        [ "org.factor." prepend "CFBundleIdentifier" set ] bi
+        [ "CFBundleExecutable" ,, ]
+        [ "org.factor." prepend "CFBundleIdentifier" ,, ] bi
 
-        [ "Icon.icns" "CFBundleIconFile" set ] when
-    ] H{ } make-assoc ;
+        [ "Icon.icns" "CFBundleIconFile" ,, ] when
+    ] H{ } make ;
 
 : create-app-plist ( icon? executable bundle-name -- )
     [ app-plist ] keep
@@ -84,11 +84,11 @@ IN: tools.deploy.macosx
             [ "Contents/Resources" copy-resources ]
             [ "Contents/Frameworks" copy-libraries ] 2bi
             bundle-name show-in-finder
-        ] bind
+        ] with-variables
     ] with-directory ;
 
 : deploy-app-bundle? ( vocab -- ? )
-    deploy-config [ deploy-console? get not deploy-ui? get or ] bind ;
+    deploy-config [ deploy-console? get not deploy-ui? get or ] with-variables ;
 
 M: macosx deploy* ( vocab -- )
     ! pass off to M: unix deploy* if we're building a console app

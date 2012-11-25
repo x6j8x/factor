@@ -2,14 +2,13 @@
 ! Daniel Ehrenberg.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors alien.c-types alien.data alien.strings arrays
-assocs byte-arrays classes classes.struct combinators
-combinators.short-circuit continuations destructors fry generic
-grouping init io.backend io.binary io.encodings
-io.encodings.ascii io.encodings.binary io.pathnames io.ports
-io.streams.duplex kernel libc locals math math.parser memoize
-namespaces parser present sequences splitting strings summary
-system vocabs.loader vocabs.parser vocabs
-sequences.private ;
+byte-arrays classes classes.struct combinators
+combinators.short-circuit continuations destructors fry
+grouping init io.backend io.binary io.encodings.ascii
+io.encodings.binary io.pathnames io.ports io.streams.duplex
+kernel locals math math.parser memoize namespaces present
+sequences sequences.private splitting strings summary system
+vocabs vocabs.parser ;
 IN: io.sockets
 
 << {
@@ -65,7 +64,7 @@ M: local protocol drop 0 ;
 
 SLOT: port
 
-TUPLE: ipv4 { host maybe: string read-only } ;
+TUPLE: ipv4 { host maybe{ string } read-only } ;
 
 <PRIVATE
 
@@ -131,7 +130,7 @@ M: inet4 present
 M: inet4 protocol drop 0 ;
 
 TUPLE: ipv6
-{ host maybe: string read-only }
+{ host maybe{ string } read-only }
 { scope-id integer read-only } ;
 
 <PRIVATE
@@ -281,7 +280,9 @@ TUPLE: raw-port < port addr ;
 
 HOOK: (raw) io-backend ( addr -- raw )
 
-HOOK: (receive-unsafe) io-backend ( n buf datagram -- size addrspec )
+HOOK: (broadcast) io-backend ( datagram -- datagram )
+
+HOOK: (receive-unsafe) io-backend ( n buf datagram -- count addrspec )
 
 ERROR: invalid-port object ;
 
@@ -347,7 +348,7 @@ SYMBOL: remote-address
         [ (accept) ] keep
         parse-sockaddr swap
         <ports>
-    ] keep encoding>> <encoder-duplex> swap ;
+    ] [ encoding>> ] bi <encoder-duplex> swap ;
 
 : <datagram> ( addrspec -- datagram )
     [
@@ -362,6 +363,9 @@ SYMBOL: remote-address
         [ drop raw-port <port> ] [ get-local-address ] 2bi
         >>addr
     ] with-destructors ;
+
+: <broadcast> ( addrspec -- datagram )
+    <datagram> (broadcast) ;
 
 : receive-unsafe ( n buf datagram -- count addrspec )
     check-receive
@@ -393,7 +397,7 @@ GENERIC: resolve-host ( addrspec -- seq )
 
 HOOK: resolve-localhost os ( -- obj )
 
-TUPLE: hostname { host maybe: string read-only } ;
+TUPLE: hostname { host maybe{ string } read-only } ;
 
 TUPLE: inet < hostname port ;
 

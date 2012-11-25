@@ -5,7 +5,7 @@ help.topics io io.backend io.files io.launcher io.pathnames
 kernel lexer math namespaces parser prettyprint sequences
 source-files source-files.errors splitting strings summary
 tools.crossref vocabs vocabs.files vocabs.hierarchy
-vocabs.loader vocabs.metadata calendar threads ;
+vocabs.loader vocabs.metadata calendar threads words ;
 FROM: vocabs => vocab-name >vocab-link ;
 IN: editors
 
@@ -36,7 +36,10 @@ M: object editor-detached? t ;
     dup status>> { 0 f } member?
     [ drop ] [ process-failed ] if ;
 
+ERROR: invalid-location file line ;
+
 : edit-location ( file line -- )
+    over [ invalid-location ] unless
     [ absolute-path ] dip
     editor-command [ run-and-wait-for-editor ] when* ;
 
@@ -53,7 +56,7 @@ M: cannot-find-source error.
 DEFER: edit
 
 : edit-vocab ( vocab -- )
-    >vocab-link edit ;
+    vocab-name* >vocab-link edit ;
 
 GENERIC: edit ( object -- )
 
@@ -85,11 +88,23 @@ M: string edit edit-vocab ;
     [ [ smart-usage ] keep prefix ] bi
     edit-each ;
 
-: edit-docs ( vocab -- )
-    vocab-docs-path 1 edit-location ;
+GENERIC: edit-docs ( object -- )
 
-: edit-tests ( vocab -- )
-    vocab-tests-file 1 edit-location ;
+M: object edit-docs
+    vocab-name* vocab-docs-path 1 edit-location ;
+
+M: word edit-docs
+    dup "help-loc" word-prop
+    [ nip first2 edit-location ]
+    [ vocabulary>> edit-docs ]
+    if* ;
+
+GENERIC: edit-tests ( object -- )
+
+M: object edit-tests
+    vocab-name* vocab-tests-path 1 edit-location ;
+
+M: word edit-tests vocabulary>> edit-tests ;
 
 : edit-platforms ( vocab -- )
     dup vocab-platforms-path vocab-append-path 1 edit-location ;

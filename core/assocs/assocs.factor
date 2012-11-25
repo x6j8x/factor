@@ -78,6 +78,12 @@ PRIVATE>
         assoc-each
     ] [ drop ] 2bi ; inline
 
+: sift-keys ( assoc -- assoc' )
+    [ drop ] assoc-filter ; inline
+
+: sift-values ( assoc -- assoc' )
+    [ nip ] assoc-filter ; inline
+
 : assoc-partition ( ... assoc quot: ( ... key value -- ... ? ) -- ... true-assoc false-assoc )
     [ (assoc-each) partition ] [ drop ] 2bi
     [ assoc-like ] curry bi@ ; inline
@@ -108,7 +114,7 @@ M: assoc assoc-clone-like ( assoc exemplar -- newassoc )
     [ delete-at* ] keep [ set-at ] with-assoc [ 2drop ] if ;
 
 : assoc-empty? ( assoc -- ? )
-    assoc-size 0 = ;
+    assoc-size 0 = ; inline
 
 : assoc-stack ( key seq -- value )
     [ length 1 - ] keep (assoc-stack) ; flushable
@@ -157,7 +163,7 @@ M: assoc assoc-clone-like ( assoc exemplar -- newassoc )
     unless ; inline
 
 : 2cache ( ... key1 key2 assoc quot: ( ... key1 key2 -- ... value ) -- ... value )
-    [ 2array ] 2dip [ first2 ] prepose cache ; inline
+    [ 2array ] 2dip [ first2-unsafe ] prepose cache ; inline
 
 : change-at ( ..a key assoc quot: ( ..a value -- ..b newvalue ) -- ..b )
     [ [ at ] dip call ] [ drop ] 3bi set-at ; inline
@@ -167,7 +173,12 @@ M: assoc assoc-clone-like ( assoc exemplar -- newassoc )
 : inc-at ( key assoc -- ) [ 1 ] 2dip at+ ; inline
 
 : map>assoc ( ... seq quot: ( ... elt -- ... key value ) exemplar -- ... assoc )
-    [ [ 2array ] compose { } map-as ] dip assoc-like ; inline
+    dup sequence? [
+        [ [ 2array ] compose ] dip map-as
+    ] [
+        [ over assoc-size ] dip new-assoc
+        [ [ swapd set-at ] curry compose each ] keep
+    ] if ; inline
 
 : extract-keys ( seq assoc -- subassoc )
     [ [ dupd at ] curry ] keep map>assoc ;
@@ -182,7 +193,7 @@ M: assoc value-at* swap [ = nip ] curry assoc-find nip ;
     [ ?push ] change-at ;
 
 : zip ( keys values -- alist )
-    2array flip ; inline
+    [ 2array ] { } 2map-as ; inline
 
 : unzip ( assoc -- keys values )
     dup assoc-empty? [ drop { } { } ] [ >alist flip first2 ] if ;
@@ -230,7 +241,7 @@ C: <enum> enum
 
 M: enum at*
     seq>> 2dup bounds-check?
-    [ nth t ] [ 2drop f f ] if ; inline
+    [ nth-unsafe t ] [ 2drop f f ] if ; inline
 
 M: enum set-at seq>> set-nth ; inline
 

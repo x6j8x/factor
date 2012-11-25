@@ -7,6 +7,8 @@ GENERIC: >fixnum ( x -- n ) foldable
 GENERIC: >bignum ( x -- n ) foldable
 GENERIC: >integer ( x -- n ) foldable
 GENERIC: >float ( x -- y ) foldable
+GENERIC: integer>fixnum ( x -- y ) foldable
+GENERIC: integer>fixnum-strict ( x -- y ) foldable
 
 GENERIC: numerator ( a/b -- a )
 GENERIC: denominator ( a/b -- b )
@@ -56,6 +58,8 @@ GENERIC: (log2) ( x -- n ) foldable
 
 PRIVATE>
 
+ERROR: out-of-fixnum-range n ;
+
 ERROR: log2-expects-positive x ;
 
 : log2 ( x -- n )
@@ -65,7 +69,6 @@ ERROR: log2-expects-positive x ;
 : 2/ ( x -- y ) -1 shift ; inline
 : sq ( x -- y ) dup * ; inline
 : neg ( x -- -x ) -1 * ; inline
-: recip ( x -- y ) 1 swap / ; inline
 : sgn ( x -- n ) dup 0 < [ drop -1 ] [ 0 > 1 0 ? ] if ; inline
 : ?1+ ( x -- y ) [ 1 + ] [ 0 ] if* ; inline
 : rem ( x y -- z ) abs [ mod ] [ + ] [ mod ] tri ; foldable
@@ -96,7 +99,11 @@ TUPLE: complex { real real read-only } { imaginary real read-only } ;
 
 UNION: number real complex ;
 
-: fp-bitwise= ( x y -- ? ) [ double>bits ] bi@ = ; inline
+GENERIC: recip ( x -- y )
+
+M: number recip 1 swap / ; inline
+
+: fp-bitwise= ( x y -- ? ) [ double>bits ] same? ; inline
 
 GENERIC: fp-special? ( x -- ? )
 GENERIC: fp-nan? ( x -- ? )

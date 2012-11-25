@@ -1,12 +1,11 @@
 ! Copyright (C) 2008, 2011 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: io.encodings.utf8 io.encodings.binary io.files
-io.files.temp io.directories html.streams help help.home kernel
-assocs sequences make words accessors arrays help.topics vocabs
-vocabs.hierarchy help.vocabs namespaces prettyprint io
-vocabs.loader serialize fry memoize unicode.case math.order
-sorting debugger html xml.syntax xml.writer math.parser
-sets hashtables ;
+USING: accessors arrays assocs debugger fry hashtables help
+help.home help.topics help.vocabs html html.streams
+io.directories io.encodings.binary io.encodings.utf8 io.files
+io.files.temp io.pathnames kernel make math.parser memoize
+namespaces sequences serialize sorting splitting unicode.case
+vocabs vocabs.hierarchy words xml.syntax xml.writer ;
 FROM: io.encodings.ascii => ascii ;
 FROM: ascii => ascii? ;
 IN: help.html
@@ -59,6 +58,12 @@ M: f topic>filename* drop \ f topic>filename* ;
     ] [ 2drop f ] if ;
 
 M: topic url-of topic>filename ;
+
+M: pathname url-of
+    string>> "resource:" ?head [
+        "https://github.com/slavapestov/factor/blob/master/"
+        prepend
+    ] [ drop f ] if ;
 
 : help-stylesheet ( -- xml )
     "vocab:help/html/stylesheet.css" ascii file-contents
@@ -118,16 +123,15 @@ M: topic url-of topic>filename ;
     all-topics [ '[ _ generate-help-file ] try ] each ;
 
 : generate-help-files ( -- )
-    [
-        recent-searches off
-        recent-words off
-        recent-articles off
-        recent-vocabs off
-        (generate-help-files)
-    ] with-scope ;
+    H{
+        { recent-searches f }
+        { recent-words f }
+        { recent-articles f }
+        { recent-vocabs f }
+    } [ (generate-help-files) ] with-variables ;
 
 : generate-help ( -- )
-    "docs" temp-file
+    "docs" cache-file
     [ make-directories ]
     [
         [

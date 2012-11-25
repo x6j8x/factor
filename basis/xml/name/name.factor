@@ -2,7 +2,7 @@
 ! See http://factorcode.org/license.txt for BSD license.
 USING: kernel namespaces accessors xml.tokenize xml.data assocs
 xml.errors xml.char-classes combinators.short-circuit splitting
-fry xml.state sequences combinators ascii ;
+fry xml.state sequences combinators ascii math make ;
 IN: xml.name
 
 ! XML namespace processing: ns = namespace
@@ -15,13 +15,13 @@ SYMBOL: ns-stack
     [
         [
             swap dup space>> "xmlns" =
-            [ main>> set ]
+            [ main>> ,, ]
             [
                 T{ name f "" "xmlns" f } names-match?
-                [ "" set ] [ drop ] if
+                [ "" ,, ] [ drop ] if
             ] if
         ] assoc-each
-    ] { } make-assoc f like ;
+    ] { } make f like ;
 
 : add-ns ( name -- )
     dup space>> dup ns-stack get assoc-stack
@@ -53,17 +53,29 @@ SYMBOL: ns-stack
         } 2&&
     ] if-empty ;
 
+<PRIVATE
+
+: valid-name-start? ( str -- ? )
+    [ f ] [ version-1.0? swap first name-start? ] if-empty ;
+
+: maybe-name ( space main -- name/f )
+    2dup {
+        [ drop valid-name-start? ]
+        [ nip valid-name-start? ]
+    } 2&& [ f <name> ] [ 2drop f ] if ;
+
 : prefixed-name ( str -- name/f )
-    ":" split dup length 2 = [
-        [ [ valid-name? ] all? ]
-        [ first2 f <name> ] bi and
-    ] [ drop f ] if ;
+    CHAR: : over index [
+        CHAR: : 2over 1 + swap index-from
+        [ 2drop f ]
+        [ [ head ] [ 1 + tail ] 2bi maybe-name ]
+        if
+    ] [ drop f ] if* ;
 
 : interpret-name ( str -- name )
-    dup prefixed-name [ ] [
-        dup valid-name?
-        [ <simple-name> ] [ bad-name ] if
-    ] ?if ;
+    dup prefixed-name [ ] [ <simple-name> ] ?if ;
+
+PRIVATE>
 
 : take-name ( -- string )
     version-1.0? '[ _ swap name-char? not ] take-until ;

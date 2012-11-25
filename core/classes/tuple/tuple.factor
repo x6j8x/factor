@@ -16,6 +16,24 @@ ERROR: not-a-tuple object ;
 : all-slots ( class -- slots )
     superclasses [ "slots" word-prop ] map concat ;
 
+ERROR: no-slot name tuple ;
+
+: offset-of-slot ( name tuple -- n )
+    2dup class-of all-slots slot-named
+    [ 2nip offset>> ] [ no-slot ] if* ;
+
+: get-slot-named ( name tuple -- value )
+    [ nip ] [ offset-of-slot ] 2bi slot ;
+
+: set-slot-named ( value name tuple -- )
+    [ nip ] [ offset-of-slot ] 2bi set-slot ;
+
+: set-slots ( assoc tuple -- )
+    [ swapd set-slot-named ] curry assoc-each ; inline
+
+: from-slots ( assoc class -- tuple )
+    new [ set-slots ] keep ; inline
+
 PREDICATE: immutable-tuple-class < tuple-class
     all-slots [ read-only>> ] all? ;
 
@@ -93,13 +111,15 @@ ERROR: bad-superclass class ;
         ] [ 2drop f ] if
     ] [ 2drop f ] if ; inline
 
-GENERIC: final-class? ( class -- ? )
+GENERIC: final-class? ( object -- ? )
 
 M: tuple-class final-class? "final" word-prop ;
 
 M: builtin-class final-class? tuple eq? not ;
 
 M: class final-class? drop t ;
+
+M: object final-class? drop f ;
 
 <PRIVATE
 
@@ -247,7 +267,8 @@ M: tuple-class update-class
     bi-curry* bi and ;
 
 : check-superclass ( superclass -- )
-    dup final-class? [ bad-superclass ] when drop ;
+    dup final-class? [ bad-superclass ] when
+    dup class? [ bad-superclass ] unless drop ;
 
 GENERIC# (define-tuple-class) 2 ( class superclass slots -- )
 
@@ -341,7 +362,7 @@ M: tuple-class rank-class drop 1 ;
 M: tuple-class instance?
     dup echelon-of layout-class-offset tuple-instance? ;
 
-M: tuple-class (flatten-class) dup set ;
+M: tuple-class (flatten-class) dup ,, ;
 
 M: tuple-class (classes-intersect?)
     {

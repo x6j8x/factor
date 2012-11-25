@@ -10,7 +10,7 @@ classes compiler.units generic.standard generic.single vocabs
 init kernel.private io.encodings accessors math.order
 destructors source-files parser classes.tuple.parser
 effects.parser lexer generic.parser strings.parser vocabs.loader
-vocabs.parser source-files.errors ;
+vocabs.parser source-files.errors grouping ;
 IN: debugger
 
 GENERIC: error-help ( error -- topic )
@@ -197,7 +197,7 @@ M: no-next-method summary
 M: inconsistent-next-method summary
     drop "Executing call-next-method with inconsistent parameters" ;
 
-M: check-method summary
+M: check-method-error summary
     drop "Invalid parameters for create-method" ;
 
 M: not-a-tuple summary
@@ -219,6 +219,8 @@ M: slice-error summary
     drop "Cannot create slice" ;
 
 M: bounds-error summary drop "Sequence index out of bounds" ;
+
+M: groups-error summary drop "Non positive group size" ;
 
 M: condition error. error>> error. ;
 
@@ -268,7 +270,7 @@ M: attempt-all-error summary drop "Nothing to attempt" ;
 
 M: already-disposed summary drop "Attempting to operate on disposed object" ;
 
-M: no-current-vocab summary
+M: no-current-vocab-error summary
     drop "Not in a vocabulary; IN: form required" ;
 
 M: no-word-error summary
@@ -351,9 +353,10 @@ M: bad-escape error.
 
 M: bad-literal-tuple summary drop "Bad literal tuple" ;
 
-M: check-mixin-class summary drop "Not a mixin class" ;
+M: check-mixin-class-error summary drop "Not a mixin class" ;
 
-M: not-found-in-roots summary drop "Cannot resolve vocab: path" ;
+M: not-found-in-roots summary
+    path>> "Cannot resolve vocab: " prepend ;
 
 M: wrong-values summary drop "Quotation's stack effect does not match call site" ;
 

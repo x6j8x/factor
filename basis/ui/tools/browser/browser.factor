@@ -2,8 +2,8 @@
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors arrays assocs classes combinators
 combinators.short-circuit compiler.units debugger fry help
-help.apropos help.crossref help.home help.topics kernel models
-sequences ui ui.commands ui.gadgets ui.gadgets.borders
+help.apropos help.crossref help.home help.topics help.stylesheet
+kernel models sequences ui ui.commands ui.gadgets ui.gadgets.borders
 ui.gadgets.buttons ui.gadgets.editors ui.gadgets.glass
 ui.gadgets.labels ui.gadgets.panes ui.gadgets.scrollers
 ui.gadgets.status-bar ui.gadgets.tracks ui.gadgets.viewports
@@ -37,7 +37,7 @@ M: browser-gadget set-history-value
     model>> [ '[ _ print-topic ] try ] <pane-control> ;
 
 : search-browser ( string browser -- )
-    '[ <apropos> _ show-help ] unless-empty ;
+    '[ <apropos-search> _ show-help ] unless-empty ;
 
 : <search-field> ( browser -- field )
     '[ _ search-browser ] <action-field>
@@ -166,6 +166,19 @@ browser-gadget "scrolling"
     { T{ key-down f f "DOWN" } com-scroll-down }
     { T{ key-down f f "PAGE_UP" } com-page-up }
     { T{ key-down f f "PAGE_DOWN" } com-page-down }
+} define-command-map
+
+: com-font-size-plus ( browser -- )
+    2 adjust-help-font-size model>> notify-connections ;
+
+: com-font-size-minus ( browser -- )
+    -2 adjust-help-font-size model>> notify-connections ;
+
+browser-gadget "fonts" f {
+    { T{ key-down f { A+ } "+" } com-font-size-plus }
+    { T{ key-down f { A+ } "=" } com-font-size-plus }
+    { T{ key-down f { A+ } "_" } com-font-size-minus }
+    { T{ key-down f { A+ } "-" } com-font-size-minus }
 } define-command-map
 
 MAIN: browser-window

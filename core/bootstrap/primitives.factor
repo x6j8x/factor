@@ -197,7 +197,7 @@ bi
 "null?" "kernel" vocab-words delete-at
 
 "fixnum" "math" create { } define-builtin
-"fixnum" "math" create ">fixnum" "math" create 1quotation "coercer" set-word-prop
+"fixnum" "math" create "integer>fixnum-strict" "math" create 1quotation "coercer" set-word-prop
 
 "bignum" "math" create { } define-builtin
 "bignum" "math" create ">bignum" "math" create 1quotation "coercer" set-word-prop
@@ -329,9 +329,11 @@ tuple
     { "drop" "kernel" ( x -- ) }
     { "2drop" "kernel" ( x y -- ) }
     { "3drop" "kernel" ( x y z -- ) }
+    { "4drop" "kernel" ( w x y z -- ) }
     { "dup" "kernel" ( x -- x x ) }
     { "2dup" "kernel" ( x y -- x y x y ) }
     { "3dup" "kernel" ( x y z -- x y z x y z ) }
+    { "4dup" "kernel" ( w x y z -- w x y z w x y z ) }
     { "rot" "kernel" ( x y z -- y z x ) }
     { "-rot" "kernel" ( x y z -- z x y ) }
     { "dupd" "kernel" ( x y -- x x y ) }
@@ -491,6 +493,7 @@ tuple
     { "bignum-bitxor" "math.private" "primitive_bignum_xor" ( x y -- z ) }
     { "bignum-log2" "math.private" "primitive_bignum_log2" ( x -- n ) }
     { "bignum-mod" "math.private" "primitive_bignum_mod" ( x y -- z ) }
+    { "bignum-gcd" "math.private" "primitive_bignum_gcd" ( x y -- z ) }
     { "bignum-shift" "math.private" "primitive_bignum_shift" ( x y -- z ) }
     { "bignum/i" "math.private" "primitive_bignum_divint" ( x y -- z ) }
     { "bignum/mod" "math.private" "primitive_bignum_divmod" ( x y -- z w ) }

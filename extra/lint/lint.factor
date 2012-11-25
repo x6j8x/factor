@@ -1,4 +1,4 @@
-! Copyright (C) 2007, 2008 Doug Coleman.
+! Copyright (C) 2007, 2008, 2011 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
 
 USING: accessors alien arrays assocs classes
@@ -19,7 +19,6 @@ CONSTANT: manual-substitutions
         { rot [ [ swap ] dip swap ] }
         { rot [ swapd swap ] }
         { over [ dup swap ] }
-        { tuck [ dup -rot ] }
         { swapd [ [ swap ] dip ] }
         { 2nip [ nip nip ] }
         { 2drop [ drop drop ] }
@@ -91,7 +90,7 @@ CONSTANT: trivial-defs
             {
                 [ length 2 = ]
                 [ first { [ sequence? ] [ assoc? ] } 1|| ]
-                [ second { clone clone-like like assoc-like make make-assoc } member? ]
+                [ second { clone clone-like like assoc-like make } member? ]
             } 1&&
         ]
 

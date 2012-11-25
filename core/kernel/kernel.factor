@@ -73,6 +73,9 @@ DEFER: if
 : 3keep ( ..a x y z quot: ( ..a x y z -- ..b ) -- ..b x y z )
     [ 3dup ] dip 3dip ; inline
 
+: 4keep ( ..a w x y z quot: ( ..a w x y z -- ..b ) -- ..b w x y z )
+    [ 4dup ] dip 4dip ; inline
+
 ! Cleavers
 : bi ( x p q -- )
     [ keep ] dip call ; inline
@@ -219,6 +222,8 @@ M: identity-tuple hashcode* nip identity-hashcode ; inline
     2dup eq? [ 2drop t ] [
         2dup both-fixnums? [ 2drop f ] [ equal? ] if
     ] if ; inline
+
+: same? ( x y quot -- ? ) bi@ = ; inline
 
 GENERIC: clone ( obj -- cloned )
 

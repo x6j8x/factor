@@ -4,7 +4,6 @@ USING: accessors arrays assocs classes classes.algebra
 classes.algebra.private classes.maybe classes.private
 combinators definitions kernel make namespaces sequences sets
 words ;
-FROM: namespaces => set ;
 IN: generic
 
 ! Method combination protocol
@@ -89,11 +88,11 @@ ERROR: no-next-method method ;
 : (call-next-method) ( method -- )
     dup next-method-quot [ call ] [ no-next-method ] ?if ;
 
-TUPLE: check-method class generic ;
+ERROR: check-method-error class generic ;
 
 : check-method ( classoid generic -- class generic )
     2dup [ classoid? ] [ generic? ] bi* and [
-        \ check-method boa throw
+        check-method-error
     ] unless ; inline
 
 : remake-generic ( generic -- )
@@ -107,13 +106,8 @@ GENERIC: update-generic ( class generic -- )
 : with-methods ( class generic quot -- )
     [ "methods" word-prop ] prepose [ update-generic ] 2bi ; inline
 
-GENERIC# method-word-name 1 ( class generic -- string )
-
-M: class method-word-name ( class generic -- string )
-    [ name>> ] bi@ "=>" glue ;
-
-M: maybe method-word-name
-    [ class>> name>> ] [ name>> ] bi* "=>" glue ;
+: method-word-name ( class generic -- string )
+    [ class-name ] [ name>> ] bi* "=>" glue ;
 
 M: method parent-word
     "method-generic" word-prop ;
@@ -123,9 +117,9 @@ M: method crossref?
 
 : method-word-props ( class generic -- assoc )
     [
-        "method-generic" set
-        "method-class" set
-    ] H{ } make-assoc ;
+        "method-generic" ,,
+        "method-class" ,,
+    ] H{ } make ;
 
 : <method> ( class generic -- method )
     check-method

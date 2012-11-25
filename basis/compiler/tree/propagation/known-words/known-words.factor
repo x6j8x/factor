@@ -3,7 +3,7 @@
 USING: effects accessors kernel kernel.private layouts math
 math.private math.integers.private math.floats.private
 math.partial-dispatch math.intervals math.parser math.order
-math.functions math.libm namespaces words sequences
+math.functions math.libm math.ratios namespaces words sequences
 sequences.private arrays assocs classes classes.algebra
 combinators generic.math splitting fry locals classes.tuple
 alien.accessors classes.tuple.private slots.private definitions
@@ -29,7 +29,7 @@ IN: compiler.tree.propagation.known-words
 
 \ /mod { rational rational } "input-classes" set-word-prop
 
-{ bitand bitor bitxor bitnot shift }
+{ bitand bitor bitxor shift }
 [ { integer integer } "input-classes" set-word-prop ] each
 
 \ bitnot { integer } "input-classes" set-word-prop
@@ -224,6 +224,8 @@ generic-comparison-ops [
 {
     { >fixnum fixnum }
     { bignum>fixnum fixnum }
+    { integer>fixnum fixnum }
+    { integer>fixnum-strict fixnum }
 
     { >bignum bignum }
     { fixnum>bignum bignum }
@@ -240,6 +242,10 @@ generic-comparison-ops [
 
 { numerator denominator }
 [ [ drop integer <class-info> ] "outputs" set-word-prop ] each
+
+\ >fraction [
+    drop integer <class-info> dup
+] "outputs" set-word-prop
 
 { (log2) fixnum-log2 bignum-log2 } [
     [
@@ -314,7 +320,7 @@ generic-comparison-ops [
     dup literal>> classoid?
     [
         literal>>
-        [ depends-on-class ]
+        [ add-depends-on-class ]
         [ predicate-output-infos ]
         bi
     ] [ 2drop object-info ] if

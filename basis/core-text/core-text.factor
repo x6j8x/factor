@@ -2,7 +2,7 @@
 ! See http://factorcode.org/license.txt for BSD license.
 USING: arrays alien alien.c-types alien.data alien.syntax kernel
 destructors accessors fry words hashtables strings sequences
-memoize assocs math math.order math.vectors math.rectangles
+memoize assocs make math math.order math.vectors math.rectangles
 math.functions locals init namespaces combinators fonts colors
 cache core-foundation core-foundation.strings
 core-foundation.attributed-strings core-foundation.utilities
@@ -32,7 +32,15 @@ FUNCTION: double CTLineGetTypographicBounds ( CTLineRef line, CGFloat* ascent, C
 
 FUNCTION: CGRect CTLineGetImageBounds ( CTLineRef line, CGContextRef context ) ;
 
+SYMBOL: retina?
+
 ERROR: not-a-string object ;
+
+MEMO: make-attributes ( open-font color -- hashtable )
+    [
+        kCTForegroundColorAttributeName ,,
+        kCTFontAttributeName ,,
+    ] H{ } make ;
 
 : <CTLine> ( string open-font color -- line )
     [
@@ -40,17 +48,12 @@ ERROR: not-a-string object ;
             dup selection? [ string>> ] when
             dup string? [ not-a-string ] unless
         ] 2dip
-        [
-            kCTForegroundColorAttributeName set
-            kCTFontAttributeName set
-        ] H{ } make-assoc <CFAttributedString> &CFRelease
+        make-attributes <CFAttributedString> &CFRelease
         CTLineCreateWithAttributedString
     ] with-destructors ;
 
-TUPLE: line < disposable line metrics image loc dim rendered-line ;
-
-TUPLE: rendered-line font string loc dim ;
-C: <rendered-line> rendered-line
+TUPLE: line < disposable font string line metrics image loc dim
+render-loc render-dim ;
 
 : typographic-bounds ( line -- width ascent descent leading )
     { CGFloat CGFloat CGFloat }
@@ -114,36 +117,38 @@ C: <rendered-line> rendered-line
 :: <line> ( font string -- line )
     [
         line new-disposable
-
-        font cache-font :> open-font
+        font retina? get-global [ cache-font@2x ] [ cache-font ] if :> open-font
         string open-font font foreground>> <CTLine> |CFRelease :> line
-
-        line line-rect :> rect
-        rect origin>> CGPoint>loc :> (loc)
-        rect size>> CGSize>dim :> (dim)
-        (loc) (dim) v+ :> (ext)
-        (loc) [ floor ] map :> loc
-        (loc) (dim) [ + ceiling ] 2map :> ext
-        ext loc [ - >integer 1 max ] 2map :> dim
-        open-font line compute-line-metrics :> metrics
-
+        open-font line compute-line-metrics
+        [ >>metrics ] [ metrics>dim >>dim ] bi
+        font >>font
+        string >>string
         line >>line
-
-        font string loc dim <rendered-line> >>rendered-line
-
-        metrics >>metrics
-
-        metrics loc dim line-loc >>loc
-
-        metrics metrics>dim >>dim
     ] with-destructors ;
 
 :: render ( line -- line image )
     line line>> :> ctline
-    line rendered-line>> string>> :> string
-    line rendered-line>> font>> :> font
-    line rendered-line>> loc>> :> loc
-    line rendered-line>> dim>> :> dim
+    line string>> :> string
+    line font>> :> font
+
+    line render-loc>> [
+
+        ctline line-rect :> rect
+        rect origin>> CGPoint>loc :> (loc)
+        rect size>> CGSize>dim :> (dim)
+        (loc) [ floor ] map :> loc
+        (loc) (dim) [ + ceiling ] 2map :> ext
+        ext loc [ - >integer 1 max ] 2map :> dim
+
+        loc line render-loc<<
+        dim line render-dim<<
+
+        line metrics>> loc dim line-loc line loc<<
+
+    ] unless
+
+    line render-loc>> :> loc
+    line render-dim>> :> dim
 
     line dim [
         {
@@ -152,7 +157,7 @@ C: <rendered-line> rendered-line
             [ loc set-text-position ]
             [ [ ctline ] dip CTLineDraw ]
         } cleave
-    ] make-bitmap-image ;
+    ] make-bitmap-image retina? get-global >>2x? ;
 
 : line>image ( line -- image )
     dup image>> [ render >>image ] unless image>> ;
@@ -162,6 +167,6 @@ M: line dispose* line>> CFRelease ;
 SYMBOL: cached-lines
 
 : cached-line ( font string -- line )
-    cached-lines get [ <line> ] 2cache ;
+    cached-lines get-global [ <line> ] 2cache ;
 
-[ <cache-assoc> cached-lines set-global ] "core-text" add-startup-hook
+[ <cache-assoc> cached-lines set-global f retina? set-global ] "core-text" add-startup-hook

@@ -1,9 +1,8 @@
 ! Copyright (C) 2004, 2008 Slava Pestov, Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: accessors arrays combinators destructors io io.backend
-io.encodings.binary io.files io.files.types io.pathnames
-kernel namespaces sequences system vocabs.loader fry
-vocabs ;
+USING: accessors combinators combinators.short-circuit
+continuations destructors fry io io.backend io.encodings.binary
+io.files io.pathnames kernel namespaces sequences system vocabs ;
 IN: io.directories
 
 : set-current-directory ( path -- )
@@ -16,16 +15,15 @@ IN: io.directories
 HOOK: make-directory io-backend ( path -- )
 
 : make-directories ( path -- )
-    normalize-path trim-tail-separators {
-        { [ dup "." = ] [ ] }
-        { [ dup root-directory? ] [ ] }
-        { [ dup empty? ] [ ] }
-        { [ dup exists? ] [ ] }
-        [
-            dup parent-directory make-directories
-            dup make-directory
-        ]
-    } cond drop ;
+    normalize-path trim-tail-separators dup {
+        [ "." = ]
+        [ root-directory? ]
+        [ empty? ]
+        [ exists? ]
+    } 1|| [
+        dup parent-directory make-directories
+        dup make-directory
+    ] unless drop ;
 
 ! Listing directories
 TUPLE: directory-entry name type ;
@@ -40,7 +38,7 @@ HOOK: (directory-entries) os ( path -- seq )
     [ name>> { "." ".." } member? not ] filter ;
 
 : directory-files ( path -- seq )
-    directory-entries [ name>> ] map ;
+    directory-entries [ name>> ] map! ;
 
 : with-directory-entries ( path quot -- )
     '[ "" directory-entries @ ] with-directory ; inline
@@ -55,6 +53,9 @@ HOOK: touch-file io-backend ( path -- )
 HOOK: delete-file io-backend ( path -- )
 
 HOOK: delete-directory io-backend ( path -- )
+
+: ?delete-file ( path -- )
+    '[ _ delete-file ] ignore-errors ;
 
 : to-directory ( from to -- from to' )
     over file-name append-path ;

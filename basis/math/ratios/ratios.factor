@@ -12,11 +12,14 @@ IN: math.ratios
 : fraction> ( a b -- a/b )
     dup 1 number= [ drop ] [ ratio boa ] if ; inline
 
-: scale ( a/b c/d -- a*d b*c )
-    2>fraction [ * swap ] dip * swap ; inline
+: (scale) ( a b c d -- a*d b*c )
+    [ * swap ] dip * swap ; inline
 
-: ratio+d ( a/b c/d -- b*d )
-    [ denominator ] bi@ * ; inline
+: scale ( a/b c/d -- a*d b*c )
+    2>fraction (scale) ; inline
+
+: scale+d ( a/b c/d -- a*d b*c b*d )
+    2>fraction [ (scale) ] 2keep * ; inline
 
 PRIVATE>
 
@@ -30,8 +33,18 @@ M: integer /
         division-by-zero
     ] [
         dup 0 < [ [ neg ] bi@ ] when
-        2dup gcd nip [ /i ] curry bi@ fraction>
+        2dup fast-gcd [ /i ] curry bi@ fraction>
     ] if-zero ;
+
+M: integer recip
+    1 swap [
+        division-by-zero
+    ] [
+        dup 0 < [ [ neg ] bi@ ] when fraction>
+    ] if-zero ;
+
+M: ratio recip
+    >fraction swap dup 0 < [ [ neg ] bi@ ] when fraction> ;
 
 M: ratio hashcode*
     nip >fraction [ hashcode ] bi@ bitxor ;
@@ -56,8 +69,8 @@ M: ratio <= scale <= ;
 M: ratio > scale > ;
 M: ratio >= scale >= ;
 
-M: ratio + [ scale + ] [ ratio+d ] 2bi / ;
-M: ratio - [ scale - ] [ ratio+d ] 2bi / ;
+M: ratio + scale+d [ + ] [ / ] bi* ;
+M: ratio - scale+d [ - ] [ / ] bi* ;
 M: ratio * 2>fraction [ * ] 2bi@ / ;
 M: ratio / scale / ;
 M: ratio /i scale /i ;

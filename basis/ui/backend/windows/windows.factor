@@ -169,9 +169,6 @@ M: windows-ui-backend (pixel-format-attribute)
 
 PRIVATE>
 
-: lo-word ( wparam -- lo ) c:short <ref> c:short deref ; inline
-: hi-word ( wparam -- hi ) -16 shift lo-word ; inline
-: >lo-hi ( WORD -- array ) [ lo-word ] [ hi-word ] bi 2array ;
 : GET_APPCOMMAND_LPARAM ( lParam -- appCommand )
     hi-word FAPPCOMMAND_MASK lo-word bitnot bitand ; inline
 
@@ -201,14 +198,14 @@ PRIVATE>
             CF_UNICODETEXT GetClipboardData dup win32-error=0/f
             dup GlobalLock dup win32-error=0/f
             GlobalUnlock win32-error=0/f
-            utf16n alien>string
+            alien>native-string
         ] if
     ] with-clipboard
     crlf>lf ;
 
 : copy ( str -- )
     lf>crlf [
-        utf16n string>alien
+        native-string>alien
         EmptyClipboard win32-error=0/f
         GMEM_MOVEABLE over length 1 + GlobalAlloc
             dup win32-error=0/f
@@ -536,7 +533,7 @@ SYMBOL: nc-buttons
     >lo-hi swap window move-hand fire-motion ;
 
 :: handle-wm-mousewheel ( hWnd uMsg wParam lParam -- )
-    wParam mouse-scroll hand-loc get hWnd window send-scroll ;
+    wParam mouse-scroll hand-loc get-global hWnd window send-scroll ;
 
 : handle-wm-cancelmode ( hWnd uMsg wParam lParam -- )
     #! message sent if windows needs application to stop dragging
@@ -642,7 +639,7 @@ M: windows-ui-backend do-events
         0 >>cbClsExtra
         0 >>cbWndExtra
         f GetModuleHandle >>hInstance
-        f GetModuleHandle "APPICON" utf16n string>alien LoadIcon >>hIcon
+        f GetModuleHandle "APPICON" native-string>alien LoadIcon >>hIcon
         f IDC_ARROW LoadCursor >>hCursor
 
         class-name-ptr >>lpszClassName
@@ -859,7 +856,7 @@ M: windows-ui-backend (set-fullscreen) ( ? world -- )
 M: windows-ui-backend (fullscreen?) ( world -- ? )
     handle>> hWnd>>
     [ hwnd>RECT ] [ fullscreen-RECT ] bi
-    [ get-RECT-dimensions 2array 2nip ] bi@ = ;
+    [ get-RECT-dimensions 2array 2nip ] same? ;
 
 M: windows-ui-backend ui-backend-available?
     t ;

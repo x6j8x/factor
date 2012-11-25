@@ -4,7 +4,7 @@ USING: io io.encodings.ascii math.parser sequences splitting
 kernel assocs io.files combinators math.order math namespaces
 arrays sequences.deep accessors alien.c-types alien.data
 game.models game.models.util gpu.shaders images game.models.loader
-prettyprint specialized-arrays ;
+prettyprint specialized-arrays make ;
 QUALIFIED-WITH: alien.c-types c
 SPECIALIZED-ARRAYS: c:float c:uint ;
 IN: game.models.obj
@@ -76,13 +76,13 @@ TUPLE: material
 
 : read-mtl ( file -- material-dictionary )
     [
-        f current-material set
-        H{ } clone material-dictionary set
-    ] H{ } make-assoc
+        f current-material ,,
+        H{ } clone material-dictionary ,,
+    ] H{ } make
     [
         ascii file-lines [ line>mtl ] each
         md
-    ] bind ;
+    ] with-variables ;
 
 VERTEX-FORMAT: obj-vertex-format
     { "POSITION" float-components 3 f }
@@ -104,7 +104,7 @@ VERTEX-FORMAT: obj-vertex-format
             [ 1 - vt get nth ] bi* 2array flatten
         ] }
     } case ;
-          
+
 : quad>aos ( x -- y z )
     [ 3 head [ triangle>aos 1array ] map ]
     [ [ 2 swap nth ]
@@ -151,16 +151,16 @@ PRIVATE>
 M: obj-models stream>models
     drop
     [
-        V{ } clone vp set
-        V{ } clone vt set
-        V{ } clone vn set
-        V{ } clone models set
-        V{ } V{ } H{ } <indexed-seq> current-model set
-        f current-material set
-        f material-dictionary set
-    ] H{ } make-assoc 
+        V{ } clone vp ,,
+        V{ } clone vt ,,
+        V{ } clone vn ,,
+        V{ } clone models ,,
+        V{ } V{ } H{ } <indexed-seq> current-model ,,
+        f current-material ,,
+        f material-dictionary ,,
+    ] H{ } make
     [
         [ line>obj ] each-stream-line push-current-model
         models get
-    ] bind ;
+    ] with-variables ;
 

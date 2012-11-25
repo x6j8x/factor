@@ -5,7 +5,7 @@ ui.baseline-alignment.private kernel math math.functions math.vectors
 math.order math.rectangles namespaces accessors fry combinators arrays ;
 IN: ui.gadgets.packs
 
-TUPLE: pack < gadget
+TUPLE: pack < aligned-gadget
 { align initial: 0 } { fill initial: 0 } { gap initial: { 0 0 } } ;
 
 <PRIVATE
@@ -39,7 +39,7 @@ TUPLE: pack < gadget
 
 : round-dims ( seq -- newseq )
     [ { 0 0 } ] dip
-    [ swap v- dup [ ceiling ] map [ swap v- ] keep ] map
+    [ swap v- dup vceiling [ swap v- ] keep ] map
     nip ;
 
 PRIVATE>
@@ -66,11 +66,11 @@ PRIVATE>
 
 : max-pack-dim ( pack sizes -- dim )
     over align>> +baseline+ eq?
-    [ [ children>> ] dip measure-height 0 swap 2array ] [ nip max-dim ] if ;
+    [ [ children>> ] dip measure-height 0 swap 2array ] [ nip max-dims ] if ;
 
 : pack-pref-dim ( pack sizes -- dim )
     [ max-pack-dim ]
-    [ [ gap-dim ] [ dim-sum ] bi* v+ ]
+    [ [ gap-dim ] [ sum-dims ] bi* v+ ]
     [ drop orientation>> ]
     2tri set-axis ;
 
@@ -78,23 +78,23 @@ M: pack pref-dim*
     dup children>> pref-dims pack-pref-dim ;
 
 : vertical-baseline ( pack -- y )
-    children>> [ f ] [ first baseline ] if-empty ;
+    children>> [ f ] [ first baseline ] if-empty ; inline
 
 : horizontal-baseline ( pack -- y )
-    children>> dup pref-dims measure-metrics drop ;
+    children>> dup pref-dims measure-metrics drop ; inline
 
-: pack-cap-height ( pack -- n )
-    children>> [ cap-height ] map ?supremum ;
+: pack-cap-height ( pack -- n/f )
+    children>> [ cap-height ] map ?supremum ; inline
 
 PRIVATE>
 
-M: pack baseline
+M: pack baseline*
     dup orientation>> {
         { vertical [ vertical-baseline ] }
         { horizontal [ horizontal-baseline ] }
     } case ;
 
-M: pack cap-height pack-cap-height ;
+M: pack cap-height* pack-cap-height ;
 
 M: pack layout*
     dup children>> pref-dims pack-layout ;

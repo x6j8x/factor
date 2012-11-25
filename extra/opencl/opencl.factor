@@ -2,8 +2,8 @@
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors alien alien.c-types alien.data arrays
 byte-arrays combinators combinators.smart destructors
-io.encodings.ascii io.encodings.string kernel libc locals math
-namespaces opencl.ffi sequences shuffle specialized-arrays
+io.encodings.ascii io.encodings.string kernel libc locals make
+math namespaces opencl.ffi sequences shuffle specialized-arrays
 variants ;
 IN: opencl
 SPECIALIZED-ARRAYS: void* char size_t ;
@@ -34,7 +34,7 @@ ERROR: cl-error err ;
 
 : 2info ( handle1 handle2 name info_quot lift_quot -- value )
     [ 4dup 2info-data-size 2info-data-bytes ] dip call ; inline
-    
+
 : info-bool ( handle name quot -- ? )
     [ uint deref CL_TRUE = ] info ; inline
 
@@ -414,16 +414,17 @@ M: cl-filter-linear  filter-mode-constant drop CL_FILTER_LINEAR ;
 GENERIC: bind-kernel-arg ( kernel index data -- )
 M: cl-buffer  bind-kernel-arg bind-kernel-arg-buffer ;
 M: byte-array bind-kernel-arg bind-kernel-arg-data ;
+
 PRIVATE>
 
 : with-cl-state ( context/f device/f queue/f quot -- )
     [
         [
-            [ cl-current-queue   set ] when*
-            [ cl-current-device  set ] when*
-            [ cl-current-context set ] when*
-        ] 3curry H{ } make-assoc
-    ] dip bind ; inline
+            [ cl-current-queue   ,, ] when*
+            [ cl-current-device  ,, ] when*
+            [ cl-current-context ,, ] when*
+        ] 3curry H{ } make
+    ] dip with-variables ; inline
 
 : cl-platforms ( -- platforms )
     0 f 0 uint <ref> [ clGetPlatformIDs cl-success ] keep uint deref

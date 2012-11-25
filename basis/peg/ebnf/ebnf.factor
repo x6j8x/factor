@@ -381,7 +381,7 @@ SYMBOL: ignore-ws
     parser set 
     swap (transform) 
     main set 
-  ] bind ;
+  ] with-variables ;
 
 M: ebnf (transform) ( ast -- parser )
   rules>> [ (transform) ] map last ;
@@ -456,7 +456,7 @@ M: ebnf-sequence build-locals ( code ast -- code )
   elements>> filter-hidden dup length 1 = [ 
     first build-locals 
   ]  [
-    dup [ ebnf-var? ] filter empty? [
+    dup [ ebnf-var? ] any? not [
       drop 
     ] [ 
       [

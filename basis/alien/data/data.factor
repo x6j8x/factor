@@ -84,6 +84,9 @@ M: bad-byte-array-length summary
 : malloc-array ( n c-type -- array )
     [ heap-size calloc ] [ <c-direct-array> ] 2bi ; inline
 
+: malloc-like ( seq c-type -- malloc )
+    [ dup length ] dip malloc-array [ 0 swap copy ] keep ;
+
 : malloc-byte-array ( byte-array -- alien )
     binary-object [ nip malloc dup ] 2keep memcpy ;
 
@@ -127,7 +130,7 @@ ERROR: local-allocation-error ;
     ;
 
 MACRO: (simple-local-allot) ( c-type -- quot )
-    [ depends-on-c-type ]
+    [ add-depends-on-c-type ]
     [ dup '[ _ heap-size _ c-type-align (local-allot) ] ] bi ;
 
 : [hairy-local-allot] ( c-type initial -- quot )

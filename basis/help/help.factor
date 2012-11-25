@@ -69,7 +69,7 @@ M: word article-title
             [ \ $vocabulary swap 2array , ]
             [ word-help % ]
             [ \ $related swap 2array , ]
-            [ get-global [ \ $value swap 2array , ] when* ]
+            [ dup is-global [ get-global \ $value swap 2array , ] [ drop ] if ]
             [ \ $definition swap 2array , ]
         } cleave
     ] { } make ;
@@ -102,7 +102,7 @@ M: word set-article-parent swap "help-parent" set-word-prop ;
     [ prefix 1array ] dip prefix , ;
 
 : ($navigation-table) ( element -- )
-    help-path-style get table-style set [ $table ] with-scope ;
+    help-path-style get table-style [ $table ] with-variable ;
 
 : $navigation-table ( topic -- )
     [

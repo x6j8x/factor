@@ -61,7 +61,8 @@ ERROR: can't-deploy-library-file library ;
     ] { } make ;
 
 : staging-image-name ( profile -- name )
-    "-" join "staging." ".image" surround temp-file ;
+    "-" join "." my-arch 3append
+    "staging." ".image" surround cache-file ;
 
 DEFER: ?make-staging-image
 
@@ -111,7 +112,7 @@ DEFER: ?make-staging-image
             "-output-image=" prepend ,
             "-pic=0" ,
         ] { } make
-    ] bind ;
+    ] with-variables ;
 
 : parse-vocab-manifest-file ( path -- vocab-manifest )
     utf8 file-lines [ "empty vocab manifest!" throw ] [

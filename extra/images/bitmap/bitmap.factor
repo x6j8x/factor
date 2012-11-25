@@ -290,8 +290,8 @@ ERROR: bmp-not-supported n ;
             color-index>>
         ] }
         { 8 [ color-lookup ] }
-        { 4 [ [ 4 b:byte-array-n>seq ] change-color-index color-lookup ] }
-        { 1 [ [ 1 b:byte-array-n>seq ] change-color-index color-lookup ] }
+        { 4 [ [ 4 b:byte-array-n>sequence ] change-color-index color-lookup ] }
+        { 1 [ [ 1 b:byte-array-n>sequence ] change-color-index color-lookup ] }
         [ bmp-not-supported ]
     } case >byte-array ;
 
@@ -370,7 +370,7 @@ ERROR: unsupported-bitmap-file magic ;
 : loading-bitmap>bytes ( loading-bitmap -- byte-array )
     uncompress-bitmap bitmap>bytes ;
 
-M: bmp-image stream>image ( stream bmp-image -- bitmap )
+M: bmp-image stream>image* ( stream bmp-image -- bitmap )
     drop load-bitmap
     [ image new ] dip
     {

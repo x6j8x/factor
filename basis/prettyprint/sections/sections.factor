@@ -59,8 +59,8 @@ M: maybe vocabulary-name
     ] if ;
 
 : text-fits? ( len -- ? )
-    margin get dup zero?
-    [ 2drop t ] [ [ pprinter get indent>> + ] dip <= ] if ;
+    margin get
+    [ drop t ] [ [ pprinter get indent>> + ] dip <= ] if-zero ;
 
 ! break only if position margin 2 / >
 SYMBOL: soft
@@ -183,7 +183,7 @@ TUPLE: block < section sections ;
     [ short-section? ] bi
     and [ bl ] when ;
 
-: line-break ( type -- ) [ <line-break> add-section ] when* ;
+: add-line-break ( type -- ) [ <line-break> add-section ] when* ;
 
 M: block section-fits? ( section -- ? )
     line-limit? [ drop t ] [ call-next-method ] if ;
@@ -216,16 +216,16 @@ M: block short-section ( block -- )
 : <object ( obj -- ) presented associate <block> (<block) ;
 
 ! Text section
-TUPLE: text < section string ;
+TUPLE: text-section < section string ;
 
 : <text> ( string style -- text )
-    over length 1 + \ text new-section
+    over length 1 + \ text-section new-section
         swap >>style
         swap >>string ;
 
-M: text short-section string>> write ;
+M: text-section short-section string>> write ;
 
-M: text long-section short-section ;
+M: text-section long-section short-section ;
 
 : styled-text ( string style -- ) <text> add-section ;
 
@@ -354,15 +354,16 @@ M: block long-section ( block -- )
 
 : make-pprint ( obj quot -- block manifest )
     [
-        0 position set
-        H{ } clone pprinter-use set
-        V{ } clone recursion-check set
-        V{ } clone pprinter-stack set
+        0 position ,,
+        H{ } clone pprinter-use ,,
+        V{ } clone recursion-check ,,
+        V{ } clone pprinter-stack ,,
+    ] H{ } make [
         over <object
         call
         pprinter-block
         pprinter-manifest
-    ] with-scope ; inline
+    ] with-variables ; inline
 
 : with-pprint ( obj quot -- )
     make-pprint drop do-pprint ; inline

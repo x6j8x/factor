@@ -89,7 +89,7 @@ M: closer process
     [ drop default-prolog ] unless ;
 
 : cut-prolog ( seq -- newseq )
-    [ [ prolog? not ] [ "" = not ] bi and ] filter ;
+    [ { [ prolog? not ] [ "" = not ] } 1&& ] filter ;
 
 : make-xml-doc ( seq -- xml-doc )
     [ get-prolog ] keep
@@ -120,7 +120,7 @@ TUPLE: pull-xml scope ;
         text-now? get [ parse-text f ] [
             get-char [ make-tag t ] [ f f ] if
         ] if text-now? set
-    ] bind ;
+    ] with-variables ;
 
 <PRIVATE
 

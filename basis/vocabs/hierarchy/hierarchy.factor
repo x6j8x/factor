@@ -1,7 +1,7 @@
 ! Copyright (C) 2007, 2009 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors arrays assocs combinators.short-circuit fry
-io.directories io.files io.files.info io.pathnames kernel make
+io.directories io.files io.files.types io.pathnames kernel make
 memoize namespaces sequences sorting splitting vocabs sets
 vocabs.loader vocabs.metadata vocabs.errors ;
 RENAME: child-vocabs vocabs => vocabs:child-vocabs
@@ -18,9 +18,12 @@ M: vocab-prefix vocab-name name>> ;
 : vocab-subdirs ( dir -- dirs )
     [
         [
-            { [ link-info directory? ] [ "." head? not ] } 1&&
-        ] filter
-    ] with-directory-files natural-sort ;
+            {
+                [ type>> +directory+ = ]
+                [ name>> "." head? not ]
+            } 1&&
+        ] filter [ name>> ] map!
+    ] with-directory-entries natural-sort ;
 
 : vocab-dir? ( root name -- ? )
     over
@@ -37,23 +40,24 @@ ERROR: vocab-root-required root ;
     [ ensure-vocab-root ] [ check-vocab-name ] bi* ;
 
 : (child-vocabs) ( root prefix -- vocabs )
-    ensure-vocab-root/prefix
+    check-vocab-name
     [ vocab-dir append-path dup exists? [ vocab-subdirs ] [ drop { } ] if ]
-    [ nip [ '[ [ _ "." ] dip 3append ] map ] unless-empty ]
-    [ drop '[ _ over vocab-dir? [ >vocab-link ] [ <vocab-prefix> ] if ] map ]
+    [ nip [ "." append '[ _ prepend ] map! ] unless-empty ]
+    [ drop '[ _ over vocab-dir? [ >vocab-link ] [ <vocab-prefix> ] if ] map! ]
     2tri ;
 
 : ((child-vocabs-recursive)) ( root prefix -- )
-    dupd vocab-name (child-vocabs)
-    [ dup , ((child-vocabs-recursive)) ] with each ;
+    dupd vocab-name (child-vocabs) [ % ] keep
+    [ ((child-vocabs-recursive)) ] with each ;
 
 : (child-vocabs-recursive) ( root prefix -- seq )
+    [ ensure-vocab-root ] dip
     [ ((child-vocabs-recursive)) ] { } make ;
 
 : no-rooted ( seq -- seq' ) [ find-vocab-root not ] filter ;
 
 : one-level-only? ( name prefix -- ? )
-    ?head [ "." split1 nip not ] dip and ;
+    ?head [ "." split1 nip not ] [ drop f ] if ;
 
 : unrooted-child-vocabs ( prefix -- seq )
     [ vocabs no-rooted ] dip
@@ -87,7 +91,7 @@ PRIVATE>
 
 : child-vocabs ( prefix -- assoc )
     [ [ vocab-roots get ] dip '[ dup _ (child-vocabs) ] { } map>assoc ]
-    [ unrooted-child-vocabs [ lookup-vocab ] map f swap 2array ]
+    [ unrooted-child-vocabs [ lookup-vocab ] map! f swap 2array ]
     bi suffix ;
 
 : all-vocabs ( -- assoc )
@@ -95,17 +99,17 @@ PRIVATE>
 
 : child-vocabs-recursive ( prefix -- assoc )
     [ [ vocab-roots get ] dip '[ dup _ (child-vocabs-recursive) ] { } map>assoc ]
-    [ unrooted-child-vocabs-recursive [ lookup-vocab ] map f swap 2array ]
+    [ unrooted-child-vocabs-recursive [ lookup-vocab ] map! f swap 2array ]
     bi suffix ;
 
 MEMO: all-vocabs-recursive ( -- assoc )
     "" child-vocabs-recursive ;
 
 : all-vocab-names ( -- seq )
-    all-vocabs-recursive filter-vocabs [ vocab-name ] map ;
+    all-vocabs-recursive filter-vocabs [ vocab-name ] map! ;
 
 : child-vocab-names ( prefix -- seq )
-    child-vocabs filter-vocabs [ vocab-name ] map ;
+    child-vocabs filter-vocabs [ vocab-name ] map! ;
 
 <PRIVATE
 

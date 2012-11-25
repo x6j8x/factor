@@ -107,7 +107,7 @@ PRIVATE>
 
 ! Help support
 
-: fuel-get-article ( name -- ) article fuel-eval-set-result ;
+: fuel-get-article ( name -- ) lookup-article fuel-eval-set-result ;
 
 : fuel-get-article-title ( name -- )
     articles get at [ article-title ] [ f ] if* fuel-eval-set-result ;
@@ -143,7 +143,7 @@ PRIVATE>
     dup require vocab-source-path absolute-path fuel-eval-set-result ;
 
 : fuel-scaffold-help ( name devname -- )
-    [ fuel-scaffold-name dup require dup scaffold-help ] with-scope
+    [ fuel-scaffold-name dup require dup scaffold-docs ] with-scope
     vocab-docs-path absolute-path fuel-eval-set-result ;
 
 : fuel-scaffold-tests ( name devname -- )

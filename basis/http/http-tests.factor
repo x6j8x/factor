@@ -1,7 +1,7 @@
 USING: http http.server http.client http.client.private tools.test
 multiline io.streams.string io.encodings.utf8 io.encodings.8-bit
 io.encodings.binary io.encodings.string io.encodings.ascii kernel
-arrays splitting sequences assocs io.sockets db db.sqlite
+arrays splitting sequences assocs io.sockets db db.sqlite make
 continuations urls hashtables accessors namespaces xml.data
 io.encodings.8-bit.latin1 random combinators.short-circuit ;
 IN: http.tests
@@ -373,10 +373,10 @@ SYMBOL: a
 
 [ "4" ] [
     [
-        "4" "a" set
-        "http://localhost" add-addr "__u" set
-        "session-id" get session-id-key set
-    ] H{ } make-assoc
+        "4" "a" ,,
+        "http://localhost" add-addr "__u" ,,
+        "session-id" get session-id-key ,,
+    ] H{ } make
     "http://localhost/" add-addr <post-request> "cookies" get >>cookies http-request nip test-a
 ] unit-test
 
@@ -385,10 +385,10 @@ SYMBOL: a
 ! Test flash scope
 [ "xyz" ] [
     [
-        "xyz" "a" set
-        "http://localhost" add-addr "__u" set
-        "session-id" get session-id-key set
-    ] H{ } make-assoc
+        "xyz" "a" ,,
+        "http://localhost" add-addr "__u" ,,
+        "session-id" get session-id-key ,,
+    ] H{ } make
     "http://localhost/" add-addr <post-request> "cookies" get >>cookies http-request nip test-a
 ] unit-test
 
@@ -438,9 +438,9 @@ SYMBOL: a
 
 ! Check that download throws errors (reported by Chris Double)
 [
-    "resource:temp" [
+    [
         "http://localhost/tweet_my_twat" add-addr download
-    ] with-directory
+    ] with-temp-directory
 ] must-fail
 
 [ ] [ stop-test-httpd ] unit-test

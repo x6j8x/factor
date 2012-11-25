@@ -76,7 +76,7 @@ SYMBOL: total
 ! Part II: Topologically sorting specializers
 : maximal-element ( seq quot -- n elt )
     dupd [
-        swapd [ call +lt+ = ] 2curry filter empty?
+        swapd [ call +lt+ = ] 2curry any? not
     ] 2curry find [ "Topological sort failed" throw ] unless* ;
     inline
 
@@ -130,7 +130,7 @@ ERROR: no-method arguments generic ;
 
 : multi-dispatch-quot ( methods generic -- quot )
     [ make-default-method ]
-    [ drop [ [ multi-predicate ] dip ] assoc-map reverse ]
+    [ drop [ [ multi-predicate ] dip ] assoc-map reverse! ]
     2bi alist>quot ;
 
 ! Generic words
@@ -164,9 +164,9 @@ M: method-body crossref?
 
 : method-word-props ( specializer generic -- assoc )
     [
-        "multi-method-generic" set
-        "multi-method-specializer" set
-    ] H{ } make-assoc ;
+        "multi-method-generic" ,,
+        "multi-method-specializer" ,,
+    ] H{ } make ;
 
 : <method> ( specializer generic -- word )
     [ method-word-props ] 2keep

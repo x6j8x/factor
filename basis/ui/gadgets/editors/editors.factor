@@ -359,6 +359,12 @@ M: editor gadget-text* editor-string % ;
 : delete-to-end-of-line ( editor -- ) 
     one-line-elt editor-delete ;
 
+: delete-to-start-of-document ( editor -- )
+    doc-elt editor-delete ;
+
+: delete-to-end-of-document ( editor -- )
+    doc-elt editor-delete ;
+
 : com-undo ( editor -- ) model>> undo ;
 
 : com-redo ( editor -- ) model>> redo ;
@@ -493,6 +499,7 @@ editor "selection" f {
     } show-commands-menu ;
 
 editor "misc" f {
+    ! { T{ button-down f f 2 } paste-selection }
     { T{ button-down f f 3 } editor-menu }
 } define-command-map
 

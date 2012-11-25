@@ -8,6 +8,9 @@ windows.winsock locals ;
 FROM: namespaces => get ;
 IN: io.sockets.windows
 
+: set-socket-option ( handle level opt -- )
+    [ handle>> ] 2dip 1 int <ref> dup byte-length setsockopt socket-error ;
+
 M: windows addrinfo-error ( n -- )
     winsock-return-check ;
 
@@ -86,11 +89,14 @@ M: windows (datagram) ( addrspec -- handle )
 M: windows (raw) ( addrspec -- handle )
     [ SOCK_RAW server-socket ] with-destructors ;
 
+M: windows (broadcast) ( datagram -- datagram )
+    dup handle>> SOL_SOCKET SO_BROADCAST set-socket-option ;
+
 : malloc-int ( n -- alien )
     int <ref> malloc-byte-array ; inline
 
 M: windows WSASocket-flags ( -- DWORD )
-    WSA_FLAG_OVERLAPPED ;
+    WSA_FLAG_OVERLAPPED ; inline
 
 : get-ConnectEx-ptr ( socket -- void* )
     SIO_GET_EXTENSION_FUNCTION_POINTER

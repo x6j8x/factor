@@ -69,7 +69,7 @@ UNION: wrap-set texture-wrap sequence ;
 TUPLE: texture-parameters
     { wrap wrap-set initial: { repeat-texcoord repeat-texcoord repeat-texcoord } }
     { min-filter texture-filter initial: filter-nearest }
-    { min-mipmap-filter maybe: texture-filter initial: filter-linear }
+    { min-mipmap-filter maybe{ texture-filter } initial: filter-linear }
     { mag-filter texture-filter initial: filter-linear }
     { min-lod integer initial: -1000 }
     { max-lod integer initial:  1000 }
@@ -265,7 +265,7 @@ M:: texture-2d-data-target texture-dim ( tdt level -- dim )
 
 M:: texture-3d-data-target texture-dim ( tdt level -- dim )
     tdt bind-tdt :> texture
-    tdt texture-data-gl-target level 
+    tdt texture-data-gl-target level
     [ GL_TEXTURE_WIDTH get-texture-int ]
     [ GL_TEXTURE_HEIGHT get-texture-int ]
     [ GL_TEXTURE_DEPTH get-texture-int ] 2tri
@@ -307,7 +307,7 @@ TYPED: read-compressed-texture ( tdt: texture-data-target level: integer -- byte
     [ texture-dim ]
     [ drop texture-object [ component-order>> ] [ component-type>> ] bi f f ]
     [ read-texture ] 2tri
-    image boa ; inline
+    f image boa ; inline
 
 <PRIVATE
 : bind-texture ( texture -- gl-target )

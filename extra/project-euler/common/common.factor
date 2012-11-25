@@ -80,7 +80,7 @@ PRIVATE>
     ] if ;
 
 : number>digits ( n -- seq )
-    [ dup 0 = not ] [ 10 /mod ] produce reverse nip ;
+    [ dup 0 = not ] [ 10 /mod ] produce reverse! nip ;
 
 : number-length ( n -- m )
     abs [
@@ -118,7 +118,7 @@ PRIVATE>
     [ propagate dup ] map nip reverse swap suffix ;
 
 : permutations? ( n m -- ? )
-    [ count-digits ] bi@ = ;
+    [ count-digits ] same? ;
 
 : sum-divisors ( n -- sum )
     dup 4 < [ { 0 1 3 4 } nth ] [ (sum-divisors) ] if ;

@@ -1,6 +1,7 @@
 ! Copyright (C) 2008 Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: assocs help.markup help.syntax io.streams.string sequences strings ;
+USING: assocs help.markup help.syntax io.streams.string
+libc sequences strings ;
 IN: environment
 
 HELP: (os-envs)
@@ -29,6 +30,21 @@ HELP: os-env
     }
 } ;
 
+HELP: change-os-env
+{ $values { "key" string } { "quot" { $quotation "( old -- new )" } } }
+{ $description "Applies a quotation to change the value stored in an environment variable." }
+{ $examples
+    "This is an operating system-specific feature. On Unix, you can do:"
+    { $unchecked-example
+        "USING: environment io ;"
+        "\"USER\" os-env print"
+        "\"USER\" [ \"-doe\" append ] change-os-env"
+        "\"USER\" os-env print"
+        "jane\njane-doe"
+    }
+}
+{ $side-effects "key" } ;
+
 HELP: os-envs
 { $values { "assoc" "an association mapping strings to strings" } }
 { $description "Outputs the current set of environment variables." }
@@ -39,8 +55,16 @@ HELP: os-envs
 HELP: set-os-envs
 { $values { "assoc" "an association mapping strings to strings" } }
 { $description "Replaces the current set of environment variables." }
+{ $warning "Leaks memory on Unix. If your program calls this function repeatedly, call " { $link set-os-envs-pointer } " with a malloced pointer and manage your memory instead." }
 { $notes
     "Names and values of environment variables are operating system-specific. Windows NT allows values up to 32766 characters in length."
+} ;
+
+HELP: set-os-envs-pointer
+{ $values { "malloc" "a pointer to memory from the heap obtained through " { $link malloc } " or similar" } }
+{ $description "Set then " { $snippet "environ" } " pointer. Factor must retain a pointer to this memory until exiting the program." }
+{ $notes
+    "Names and values of environment variables are operating system-specific."
 } ;
 
 HELP: set-os-env
@@ -57,7 +81,7 @@ HELP: unset-os-env
     "Names and values of environment variables are operating system-specific."
 } ;
 
-{ os-env os-envs set-os-env unset-os-env set-os-envs } related-words
+{ os-env os-envs set-os-env unset-os-env set-os-envs set-os-envs-pointer change-os-env } related-words
 
 
 ARTICLE: "environment" "Environment variables"
@@ -72,6 +96,12 @@ ARTICLE: "environment" "Environment variables"
     set-os-env
     unset-os-env
     set-os-envs
+    change-os-env
+}
+"Leak-free setting of all environment variables on Unix:"
+{ $subsections
+    set-os-envs-pointer
+
 } ;
 
 ABOUT: "environment"

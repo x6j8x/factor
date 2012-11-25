@@ -48,7 +48,7 @@ M: eql-wrapper hashcode* obj>> hashcode* ;
 GENERIC: (eql?) ( obj1 obj2 -- ? )
 
 : eql? ( obj1 obj2 -- ? )
-    { [ [ class-of ] bi@ = ] [ (eql?) ] } 2&& ;
+    { [ [ class-of ] same? ] [ (eql?) ] } 2&& ;
 
 M: fixnum (eql?) eq? ;
 
@@ -56,7 +56,7 @@ M: bignum (eql?) = ;
 
 M: float (eql?) fp-bitwise= ;
 
-M: sequence (eql?) 2dup [ length ] bi@ = [ [ eql? ] 2all? ] [ 2drop f ] if ;
+M: sequence (eql?) 2dup [ length ] same? [ [ eql? ] 2all? ] [ 2drop f ] if ;
 
 M: object (eql?) = ;
 
@@ -277,14 +277,14 @@ GENERIC: ' ( obj -- ptr )
 
 : bignum-radix ( -- n ) bignum-bits 2^ 1 - ;
 
-: bignum>seq ( n -- seq )
+: bignum>sequence ( n -- seq )
     #! n is positive or zero.
     [ dup 0 > ]
     [ [ bignum-bits neg shift ] [ bignum-radix bitand ] bi ]
     produce nip ;
 
 : emit-bignum ( n -- )
-    dup dup 0 < [ neg ] when bignum>seq
+    dup dup 0 < [ neg ] when bignum>sequence
     [ nip length 1 + emit-fixnum ]
     [ drop 0 < 1 0 ? emit ]
     [ nip emit-seq ]
@@ -585,14 +585,17 @@ M: quotation '
 PRIVATE>
 
 : make-image ( arch -- )
-    [
-        parser-quiet? off
-        auto-use? off
-        architecture set
+    architecture associate H{
+        { parser-quiet? f }
+        { auto-use? f }
+    } assoc-union! [
         "resource:/core/bootstrap/stage1.factor" run-file
         build-image
         write-image
-    ] with-scope ;
+    ] with-variables ;
 
 : make-images ( -- )
     images [ make-image ] each ;
+
+: make-my-image ( -- )
+    my-arch make-image ;

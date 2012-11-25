@@ -4,10 +4,14 @@ USING: math kernel math.constants math.private math.bits
 math.libm combinators fry math.order sequences ;
 IN: math.functions
 
-: >fraction ( a/b -- a b )
-    [ numerator ] [ denominator ] bi ; inline
+GENERIC: >fraction ( a/b -- a b )
+
+M: integer >fraction 1 ; inline
+
+M: ratio >fraction [ numerator ] [ denominator ] bi ; inline
 
 : rect> ( x y -- z )
+    ! Note: an imaginary 0.0 should still create a complex
     dup 0 = [ drop ] [ complex boa ] if ; inline
 
 GENERIC: sqrt ( x -- y ) foldable
@@ -24,12 +28,25 @@ M: real sqrt
 
 <PRIVATE
 
-GENERIC# ^n 1 ( z w -- z^w ) foldable
+: (^fixnum) ( z w -- z^w )
+    [ 1 ] 2dip
+    [ dup zero? ] [
+        dup odd? [
+            [ [ * ] keep ] [ 1 - ] bi*
+        ] when [ sq ] [ 2/ ] bi*
+    ] until 2drop ; inline
 
-: (^n) ( z w -- z^w )
+: (^bignum) ( z w -- z^w )
     make-bits 1 [ [ over * ] when [ sq ] dip ] reduce nip ; inline
 
-M: integer ^n
+: (^n) ( z w -- z^w )
+    dup fixnum? [ (^fixnum) ] [ (^bignum) ] if ; inline
+
+GENERIC# ^n 1 ( z w -- z^w ) foldable
+
+M: fixnum ^n (^n) ;
+
+M: bignum ^n
     [ factor-2s ] dip [ (^n) ] keep rot * shift ;
 
 M: ratio ^n
@@ -57,20 +74,20 @@ PRIVATE>
 
 : polar> ( abs arg -- z ) cis * ; inline
 
-GENERIC: exp ( x -- y )
+GENERIC: e^ ( x -- y )
 
-M: float exp fexp ; inline
+M: float e^ fexp ; inline
 
-M: real exp >float exp ; inline
+M: real e^ >float e^ ; inline
 
-M: complex exp >rect [ exp ] dip polar> ; inline
+M: complex e^ >rect [ e^ ] dip polar> ; inline
 
 <PRIVATE
 
 : ^mag ( w abs arg -- magnitude )
     [ >float-rect swap ]
     [ >float swap >float fpow ]
-    [ rot * exp /f ]
+    [ rot * e^ /f ]
     tri* ; inline
 
 : ^theta ( w abs arg -- theta )
@@ -111,8 +128,20 @@ PRIVATE>
 : gcd ( x y -- a d )
     [ 0 1 ] 2dip (gcd) dup 0 < [ neg ] when ; inline
 
+MATH: fast-gcd ( x y -- d ) foldable
+
+<PRIVATE
+
+: simple-gcd ( x y -- d ) gcd nip ; inline
+
+PRIVATE>
+
+M: real fast-gcd simple-gcd ; inline
+
+M: bignum fast-gcd bignum-gcd ; inline
+
 : lcm ( a b -- c )
-    [ * ] 2keep gcd nip /i ; foldable
+    [ * ] 2keep fast-gcd /i ; foldable
 
 : divisor? ( m n -- ? )
     mod 0 = ; inline
@@ -337,7 +366,7 @@ M: real atan >float atan ; inline
 
 : floor ( x -- y )
     dup 1 mod
-    [ ] [ dup 0 < [ - 1 - ] [ - ] if ] if-zero ; foldable
+    [ dup 0 < [ - 1 - ] [ - ] if ] unless-zero ; foldable
 
 : ceiling ( x -- y ) neg floor neg ; foldable
 
@@ -345,3 +374,25 @@ M: real atan >float atan ; inline
     [ [ / floor ] [ * ] bi ] unless-zero ;
 
 : lerp ( a b t -- a_t ) [ over - ] dip * + ; inline
+
+: roots ( x t -- seq )
+    [ [ log ] [ recip ] bi* * e^ ]
+    [ recip 2pi * 0 swap complex boa e^ ]
+    [ iota [ ^ * ] with with map ] tri ;
+
+: sigmoid ( x -- y ) neg e^ 1 + recip ; inline
+
+GENERIC: signum ( x -- y )
+
+M: real signum sgn ;
+
+M: complex signum dup abs / ;
+
+MATH: copysign ( x y -- x' )
+
+M: real copysign >float copysign ;
+
+M: float copysign
+    [ double>bits ] [ fp-sign ] bi*
+    [ 63 2^ bitor ] [ 63 2^ bitnot bitand ] if
+    bits>double ;
