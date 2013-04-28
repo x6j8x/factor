@@ -407,7 +407,7 @@ cell-bits 32 = [
 ] unit-test
 
 [ ] [
-    [ { merge } declare accum>> 0 >>length ] cleaned-up-tree drop
+    [ { merge-state } declare accum>> 0 >>length ] cleaned-up-tree drop
 ] unit-test
 
 [ ] [
@@ -483,7 +483,7 @@ cell-bits 32 = [
 ] unit-test
 
 [ t ] [
-    [ { array } declare 2 <sliced-groups> [ . . ] assoc-each ]
+    [ { array } declare 2 <groups> [ . . ] assoc-each ]
     \ nth-unsafe inlined?
 ] unit-test
 

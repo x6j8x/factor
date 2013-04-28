@@ -1,7 +1,7 @@
 ! Copyright (C) 2005, 2009 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: accessors arrays assocs kernel math vectors math.order
-sequences sequences.private ;
+USING: accessors arrays assocs growable.private kernel math
+math.order sequences sequences.private vectors ;
 IN: sorting
 
 ! Optimized merge-sort:
@@ -13,7 +13,7 @@ IN: sorting
 
 <PRIVATE
 
-TUPLE: merge
+TUPLE: merge-state
 { seq    array }
 { accum  vector }
 { accum1 vector }
@@ -22,14 +22,6 @@ TUPLE: merge
 { to1    array-capacity }
 { from2  array-capacity }
 { to2    array-capacity } ;
-
-: push-unsafe ( elt seq -- )
-    [ length ] keep
-    [ set-nth-unsafe ] [ [ 1 + ] dip length<< ] 2bi ; inline
-
-: push-all-unsafe ( from to src dst -- )
-    [ over - swap ] 2dip [ pick ] dip [ length ] keep
-    [ [ + ] dip length<< ] 2keep <copy> (copy) drop ; inline
 
 : l-elt ( merge -- elt ) [ from1>> ] [ seq>> ] bi nth-unsafe ; inline
 
@@ -78,7 +70,7 @@ TUPLE: merge
     dup accum>> 0 >>length 2drop ; inline
 
 : <merge> ( seq -- merge )
-    \ merge new
+    \ merge-state new
         over >vector >>accum1
         swap length <vector> >>accum2
         dup accum1>> underlying>> >>seq
@@ -153,16 +145,26 @@ PRIVATE>
 : inv-sort-with ( seq quot: ( elt -- key ) -- sortedseq )
     [ compare invert-comparison ] curry sort ; inline
 
+<PRIVATE
+
+: check-bounds ( alist n -- alist )
+    [ swap 2dup bounds-check? [ 2drop ] [ bounds-error ] if ]
+    curry dupd each ;
+
+PRIVATE>
+
 GENERIC: sort-keys ( obj -- sortedseq )
 
 M: object sort-keys >alist sort-keys ;
 
-M: sequence sort-keys [ first ] sort-with ;
+M: sequence sort-keys
+    0 check-bounds [ first-unsafe ] sort-with ;
 
 GENERIC: sort-values ( obj -- sortedseq )
 
 M: object sort-values >alist sort-values ;
 
-M: sequence sort-values [ second ] sort-with ;
+M: sequence sort-values
+    1 check-bounds [ second-unsafe ] sort-with ;
 
 : sort-pair ( a b -- c d ) 2dup after? [ swap ] when ;

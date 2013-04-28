@@ -16,7 +16,7 @@ C: <rgba> rgba
 
 GENERIC: >rgba ( color -- rgba )
 
-M: rgba >rgba ( rgba -- rgba ) ;
+M: rgba >rgba ( rgba -- rgba ) ; inline
 
 M: color red>> ( color -- red ) >rgba red>> ;
 M: color green>> ( color -- green ) >rgba green>> ;
@@ -28,11 +28,6 @@ M: color blue>> ( color -- blue ) >rgba blue>> ;
 : opaque? ( color -- ? ) alpha>> 1 number= ;
 
 CONSTANT: transparent T{ rgba f 0.0 0.0 0.0 0.0 }
-
-: linear-gradient ( color1 color2 percent -- color )
-    [ 1.0 swap - * ] [ * ] bi-curry swapd
-    [ [ >rgba-components drop ] [ tri@ ] bi* ] 2bi@
-    [ + ] tri-curry@ tri* 1.0 <rgba> ;
 
 : inverse-color ( color -- color' )
     >rgba-components [ [ 1.0 swap - ] tri@ ] dip <rgba> ;

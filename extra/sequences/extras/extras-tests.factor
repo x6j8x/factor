@@ -4,29 +4,6 @@ tools.test ;
 
 IN: sequences.extras.tests
 
-[ 4 ] [ 5 iota [ ] supremum-by ] unit-test
-[ 0 ] [ 5 iota [ ] infimum-by ] unit-test
-{ "bar" } [ { "bar" "baz" "qux" } [ length ] supremum-by ] unit-test
-{ "bar" } [ { "bar" "baz" "qux" } [ length ] infimum-by ] unit-test
-[ { "foo" } ] [ { { "foo" } { "bar" } } [ first ] supremum-by ] unit-test
-[ { "bar" } ] [ { { "foo" } { "bar" } } [ first ] infimum-by ] unit-test
-
-[ { 0 0 255 } ] [
-    {
-        { 0 0 0 }
-        { 95 255 95 }
-        { 215 95 95 }
-        { 95 135 255 }
-        { 135 95 135 }
-        { 135 255 255 }
-        { 0 0 255 }
-        { 0 95 95 }
-        { 0 255 215 }
-        { 135 0 95 }
-        { 255 0 175 }
-    } [ { 0 0 255 } distance ] infimum-by
-] unit-test
-
 { V{ 0 1 2 3 4 5 6 7 8 9 } } [
     V{ } clone
     10 iota >array randomize
@@ -37,6 +14,8 @@ IN: sequences.extras.tests
 
 [ { "a" "ab" "abc" "abcd" "b" "bc" "bcd" "c" "cd" "d" } ]
 [ [ "abcd" [ , ] each-subseq ] { } make ] unit-test
+
+{ B{ 115 } } [ 1 2 "asdf" B{ } subseq-as ] unit-test
 
 [ "" ] [ "abc" "def" longest-subseq ] unit-test
 [ "abcd" ] [ "abcd" "abcde" longest-subseq ] unit-test
@@ -99,6 +78,11 @@ IN: sequences.extras.tests
 
 { t } [ "ABC" dup [ blank? ] ?trim [ identity-hashcode ] same? ] unit-test
 { "ABC" } [ " ABC " [ blank? ] ?trim ] unit-test
+
+{ t } [ "ABC" dup [ blank? ] ?trim-head [ identity-hashcode ] same? ] unit-test
+{ t } [ "ABC" dup [ blank? ] ?trim-tail [ identity-hashcode ] same? ] unit-test
+{ "ABC " } [ " ABC " [ blank? ] ?trim-head ] unit-test
+{ " ABC" } [ " ABC " [ blank? ] ?trim-tail ] unit-test
 
 { "" } [ "" "" "" unsurround ] unit-test
 { "" } [ "  " " " " " unsurround ] unit-test
@@ -169,3 +153,6 @@ IN: sequences.extras.tests
 { V{ 1 } } [ 1 flatten1 ] unit-test
 { { 1 2 3 } } [ { 1 2 3 } flatten1 ] unit-test
 { { 1 2 3 { { 4 } } } } [ { 1 { 2 } { 3 { { 4 } } } } flatten1 ] unit-test
+
+{ t 3 3 } [ 10 iota [ [ odd? ] [ 1 > ] bi* and ] map-find-index ] unit-test
+{ f f f } [ 10 iota [ [ odd? ] [ 9 > ] bi* and ] map-find-index ] unit-test

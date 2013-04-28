@@ -1,4 +1,4 @@
-! Copyright (C) 2010 Your name.
+! Copyright (C) 2010 Erik Charlebois.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: sequences accessors kernel locals assocs ;
 IN: game.models.util
@@ -16,7 +16,7 @@ M:: indexed-seq set-nth ( elt n seq -- )
     seq dseq>>   :> dseq
     seq iseq>>   :> iseq
     seq rassoc>> :> rassoc
-    seq length n = not [ seq immutable ] when
+    seq length n = not [ elt n seq immutable ] when
     elt rassoc at
     [
         iseq push

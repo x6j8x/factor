@@ -65,44 +65,37 @@ TUPLE: chunking-seq { seq read-only } { n read-only } ;
 PRIVATE>
 
 TUPLE: groups < chunking-seq ;
-INSTANCE: groups subseq-chunking
+INSTANCE: groups slice-chunking
 INSTANCE: groups abstract-groups
 
 : <groups> ( seq n -- groups )
     groups new-groups ; inline
 
-TUPLE: sliced-groups < chunking-seq ;
-INSTANCE: sliced-groups slice-chunking
-INSTANCE: sliced-groups abstract-groups
-
-: <sliced-groups> ( seq n -- groups )
-    sliced-groups new-groups ; inline
-
 TUPLE: clumps < chunking-seq ;
-INSTANCE: clumps subseq-chunking
+INSTANCE: clumps slice-chunking
 INSTANCE: clumps abstract-clumps
 
 : <clumps> ( seq n -- clumps )
     clumps new-groups ; inline
 
-TUPLE: sliced-clumps < chunking-seq ;
-INSTANCE: sliced-clumps slice-chunking
-INSTANCE: sliced-clumps abstract-clumps
+<PRIVATE
 
-: <sliced-clumps> ( seq n -- clumps )
-    sliced-clumps new-groups ; inline
+: map-like ( seq n quot -- seq )
+    2keep drop '[ _ like ] map ; inline
 
-: group ( seq n -- array ) <groups> { } like ;
+PRIVATE>
 
-: clump ( seq n -- array ) <clumps> { } like ;
+: group ( seq n -- array ) [ <groups> ] map-like ; inline
+
+: clump ( seq n -- array ) [ <clumps> ] map-like ; inline
 
 : monotonic? ( seq quot: ( elt1 elt2 -- ? ) -- ? )
-    over length 2 < [ 2drop t ] [
-        over length 2 = [
+    over length dup 2 < [ 3drop t ] [
+        2 = [
             [ first2-unsafe ] dip call
         ] [
-            [ 2 <sliced-clumps> ] dip
-            '[ first2-unsafe @ ] all?
+            [ [ first-unsafe 1 ] [ ((each)) ] bi ] dip
+            '[ @ _ keep swap ] (all-integers?) nip
         ] if
     ] if ; inline
 
@@ -114,7 +107,7 @@ TUPLE: circular-slice { from read-only } { to read-only } { seq read-only } ;
 
 INSTANCE: circular-slice virtual-sequence
 
-M: circular-slice equal? over slice? [ sequence= ] [ 2drop f ] if ;
+M: circular-slice equal? over circular-slice? [ sequence= ] [ 2drop f ] if ;
 
 M: circular-slice hashcode* [ sequence-hashcode ] recursive-hashcode ;
 
@@ -127,18 +120,6 @@ M: circular-slice virtual@
 
 C: <circular-slice> circular-slice
 
-TUPLE: sliced-circular-clumps < chunking-seq ;
-INSTANCE: sliced-circular-clumps sequence
-
-M: sliced-circular-clumps length
-    seq>> length ; inline
-
-M: sliced-circular-clumps nth
-    [ n>> over + ] [ seq>> ] bi <circular-slice> ; inline
-
-: <sliced-circular-clumps> ( seq n -- clumps )
-    sliced-circular-clumps new-groups ; inline
-
 TUPLE: circular-clumps < chunking-seq ;
 INSTANCE: circular-clumps sequence
 
@@ -146,10 +127,10 @@ M: circular-clumps length
     seq>> length ; inline
 
 M: circular-clumps nth
-    [ n>> over + ] [ seq>> ] bi [ <circular-slice> ] [ like ] bi ; inline
+    [ n>> over + ] [ seq>> ] bi <circular-slice> ; inline
 
 : <circular-clumps> ( seq n -- clumps )
     circular-clumps new-groups ; inline
 
 : circular-clump ( seq n -- array )
-    <circular-clumps> { } like ; inline
+    [ <circular-clumps> ] map-like ; inline

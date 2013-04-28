@@ -6,16 +6,17 @@ IN: sequences.extras
 
 : reduce1 ( seq quot -- result ) [ unclip ] dip reduce ; inline
 
-:: reduce-r ( list identity quot: ( obj1 obj2 -- obj ) -- result )
-    list empty?
-    [ identity ]
-    [ list rest identity quot reduce-r list first quot call ] if ;
-    inline recursive
+:: reduce-r ( seq identity quot: ( obj1 obj2 -- obj ) -- result )
+    seq [ identity ] [
+        unclip [ identity quot reduce-r ] [ quot call ] bi*
+    ] if-empty ; inline recursive
 
 ! Quot must have static stack effect, unlike "reduce"
-:: reduce* ( seq id quot -- result ) seq
-    [ id ]
-    [ unclip id swap quot call( prev elt -- next ) quot reduce* ] if-empty ; inline recursive
+:: reduce* ( seq identity quot: ( prev elt -- next ) -- result )
+    seq [ identity ] [
+        unclip identity swap quot call( prev elt -- next )
+        quot reduce*
+    ] if-empty ; inline recursive
 
 :: combos ( list1 list2 -- result )
     list2 [ [ 2array ] curry list1 swap map ] map concat ;
@@ -28,26 +29,11 @@ IN: sequences.extras
 : insert-sorted ( elt seq -- seq )
     2dup [ < ] with find drop over length or swap insert-nth ;
 
-: each-from ( ... seq quot: ( ... x -- ... ) i -- ... )
-    -rot (each) (each-integer) ; inline
-
 : reduce-from ( ... seq identity quot: ( ... prev elt -- ... next ) i -- ... result )
     [ swap ] 2dip each-from ; inline
 
-: supremum-by ( seq quot: ( ... elt -- ... x ) -- elt )
-    [ [ first dup ] dip call ] 2keep [
-        dupd call pick dupd after?
-        [ [ 2drop ] 2dip ] [ 2drop ] if
-    ] curry 1 each-from drop ; inline
-
-: infimum-by ( seq quot: ( ... elt -- ... x ) -- elt )
-    [ [ first dup ] dip call ] 2keep [
-        dupd call pick dupd before?
-        [ [ 2drop ] 2dip ] [ 2drop ] if
-    ] curry 1 each-from drop ; inline
-
 : all-subseqs ( seq -- seqs )
-    dup length [1,b] [ <clumps> ] with map concat ;
+    dup length [1,b] [ clump ] with map concat ;
 
 :: each-subseq ( ... seq quot: ( ... x -- ... ) -- ... )
     seq length :> len
@@ -59,12 +45,15 @@ IN: sequences.extras
         ] each
     ] each ;
 
+: subseq-as ( from to seq exemplar -- subseq )
+    [ check-slice subseq>copy (copy) ] dip like ;
+
 : map-like ( seq exemplar -- seq' )
     '[ _ like ] map ; inline
 
 : filter-all-subseqs-range ( ... seq range quot: ( ... x -- ... ) -- seq )
     [
-        '[ <sliced-clumps> _ filter ] with map concat
+        '[ <clumps> _ filter ] with map concat
     ] 3keep 2drop map-like ; inline
 
 : filter-all-subseqs ( ... seq quot: ( ... x -- ... ) -- seq )
@@ -105,9 +94,15 @@ IN: sequences.extras
 : filter-index ( ... seq quot: ( ... elt i -- ... ? ) -- ... seq' )
     over filter-index-as ; inline
 
-: even-indices ( seq -- seq' ) [ nip even? ] filter-index ;
+: even-indices ( seq -- seq' )
+    [ length 1 + 2/ ] keep [
+        [ [ 2 * ] dip nth-unsafe ] curry
+    ] keep map-integers ;
 
-: odd-indices ( seq -- seq' ) [ nip odd? ] filter-index ;
+: odd-indices ( seq -- seq' )
+    [ length 2/ ] keep [
+        [ [ 2 * 1 + ] dip nth-unsafe ] curry
+    ] keep map-integers ;
 
 : compact ( seq quot elt -- seq' )
     [ split-when harvest ] dip join ; inline
@@ -177,7 +172,7 @@ IN: sequences.extras
 <PRIVATE
 
 : ((each-from)) ( i seq -- n quot )
-    [ length over - 0 max swap ] keep '[ _ + _ nth-unsafe ] ; inline
+    [ length over [-] swap ] keep '[ _ + _ nth-unsafe ] ; inline
 
 : (each-from) ( i seq quot -- n quot' ) [ ((each-from)) ] dip compose ;
     inline
@@ -217,15 +212,21 @@ PRIVATE>
 
 : round-robin ( seq -- newseq )
     [ { } ] [
-        [ [ length ] [ max ] map-reduce iota ] keep
+        [ longest length iota ] keep
         [ [ ?nth ] with map ] curry map concat sift
     ] if-empty ;
 
 : sift-as ( seq exemplar -- newseq )
     [ ] swap filter-as ;
 
+: sift! ( seq -- newseq )
+    [ ] filter! ;
+
 : harvest-as ( seq exemplar -- newseq )
     [ empty? not ] swap filter-as ;
+
+: harvest! ( seq -- newseq )
+    [ empty? not ] filter! ;
 
 : contains? ( seq elts -- ? )
     [ member? ] curry any? ; inline
@@ -245,10 +246,22 @@ PRIVATE>
 : trim-as ( ... seq quot: ( ... elt -- ... ? ) exemplar -- ... newseq )
     [ trim-slice ] [ like ] bi* ; inline
 
-: ?trim ( ... seq quot: ( ... elt -- ... ? ) -- ... seq/newseq )
+: ?trim ( seq quot: ( elt -- ? ) -- seq/newseq )
     over empty? [ drop ] [
         over [ first-unsafe ] [ last-unsafe ] bi pick bi@ or
         [ trim ] [ drop ] if
+    ] if ; inline
+
+: ?trim-head ( seq quot: ( elt -- ? ) -- seq/newseq )
+    over empty? [ drop ] [
+        over first-unsafe over call
+        [ trim-head ] [ drop ] if
+    ] if ; inline
+
+: ?trim-tail ( seq quot: ( elt -- ? ) -- seq/newseq )
+    over empty? [ drop ] [
+        over last-unsafe over call
+        [ trim-tail ] [ drop ] if
     ] if ; inline
 
 : unsurround ( newseq seq2 seq3 -- seq1 )
@@ -374,3 +387,16 @@ PRIVATE>
             ] [ , ] if
         ]
     ] keep dup branch? [ drop f ] unless make ;
+
+: (map-find-index) ( seq quot find-quot -- result elt index )
+    [ [ f ] 2dip [ [ nip ] 2dip call dup ] curry ] dip call
+    [ [ [ drop f ] unless ] keep ] dip ; inline
+
+: map-find-index ( ... seq quot: ( ... elt index -- ... result/f ) -- ... result elt index )
+    [ find-index ] (map-find-index) ; inline
+
+: filter-length ( seq n -- seq' ) swap [ length = ] with filter ;
+
+: all-shortest ( seqs -- seqs' ) dup shortest length filter-length ;
+
+: all-longest ( seqs -- seqs' ) dup longest length filter-length ;

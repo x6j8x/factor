@@ -9,9 +9,9 @@ math.integers.private layouts math.order vectors hashtables
 combinators effects generalizations sequences.generalizations
 assocs sets combinators.short-circuit sequences.private locals
 growable stack-checker namespaces compiler.tree.propagation.info
-;
+hash-sets ;
 FROM: math => float ;
-FROM: sets => set ;
+FROM: sets => set members ;
 IN: compiler.tree.propagation.transforms
 
 \ equal? [
@@ -113,7 +113,7 @@ IN: compiler.tree.propagation.transforms
 : shift-2^ ( -- quot )
     cell-bits tag-bits get - 1 -
     '[
-        integer>fixnum dup 0 < [ 2drop 0 ] [
+        integer>fixnum-strict dup 0 < [ 2drop 0 ] [
             dup _ < [ fixnum-shift ] [
                 fixnum-shift
             ] if
@@ -157,7 +157,7 @@ IN: compiler.tree.propagation.transforms
     in-d>> first value-info literal>> {
         { V{ } [ [ drop { } 0 vector boa ] ] }
         { H{ } [ [ drop 0 <hashtable> ] ] }
-        { HS{ } [ [ drop f fast-set ] ] }
+        { HS{ } [ [ drop 0 <hash-set> ] ] }
         [ drop f ]
     } case
 ] "custom-inlining" set-word-prop
@@ -302,14 +302,19 @@ CONSTANT: lookup-table-at-max 256
 \ at* [ at-quot ] 1 define-partial-eval
 
 : diff-quot ( seq -- quot: ( seq' -- seq'' ) )
-    tester '[ [ [ @ not ] filter ] keep set-like ] ;
+    [ tester ] keep '[ members [ @ not ] filter _ set-like ] ;
 
 M\ set diff [ diff-quot ] 1 define-partial-eval
 
 : intersect-quot ( seq -- quot: ( seq' -- seq'' ) )
-    tester '[ [ _ filter ] keep set-like ] ;
+    [ tester ] keep '[ members _ filter _ set-like ] ;
 
 M\ set intersect [ intersect-quot ] 1 define-partial-eval
+
+: intersects?-quot ( seq -- quot: ( seq' -- seq'' ) )
+    tester '[ members _ any? ] ;
+
+M\ set intersects? [ intersects?-quot ] 1 define-partial-eval
 
 : bit-quot ( #call -- quot/f )
     in-d>> second value-info interval>> 0 fixnum-bits [a,b] interval-subset?
@@ -324,7 +329,7 @@ M\ set intersect [ intersect-quot ] 1 define-partial-eval
     [ \ push def>> ] [ f ] if
 ] "custom-inlining" set-word-prop
 
-: custom-inline-fixnum ( x method -- y )
+: custom-inline-fixnum ( #call method -- y )
     [ in-d>> first value-info class>> fixnum \ f class-or class<= ] dip
     '[ [ dup [ _ no-method ] unless ] ] [ f ] if ;
 

@@ -1,9 +1,13 @@
 ! Copyright (C) 2012 John Benediktsson
 ! See http://factorcode.org/license.txt for BSD license
 
-USING: math math.extras math.ranges sequences tools.test ;
+USING: arrays kernel math math.extras math.ranges sequences
+tools.test ;
 
 IN: math.extras.test
+
+{ { 1 -1/2 1/6 0 -1/30 0 1/42 0 -1/30 0 } }
+[ 10 iota [ bernoulli ] map ] unit-test
 
 { -1 } [ -1 7 jacobi ] unit-test
 { 0 } [ 3 3 jacobi ] unit-test
@@ -77,3 +81,51 @@ IN: math.extras.test
     { 1 2 3 4 }
     { 0 1 0 0 2 3 }
 } [ { 1 2 1 1 3 4 } unique-indices ] unit-test
+
+{ { 1 8+4/5 16+3/5 24+2/5 32+1/5 } } [ 1 40 5 linspace[a,b) >array ] unit-test
+{ { 1 10+3/4 20+1/2 30+1/4 40 } } [ 1 40 5 linspace[a,b] >array ] unit-test
+
+[ f ] [ { } majority ] unit-test
+[ 1 ] [ { 1 } majority ] unit-test
+[ f ] [ { 1 2 } majority ] unit-test
+[ 1 ] [ { 1 1 2 } majority ] unit-test
+[ f ] [ { 1 1 2 2 } majority ] unit-test
+[ 2 ] [ { 1 1 2 2 2 } majority ] unit-test
+[ 3 ] [ { 1 2 3 1 2 3 1 2 3 3 } majority ] unit-test
+{ CHAR: C } [ "AAACCBBCCCBCC" majority ] unit-test
+
+[ -5 ] [ -4-3/5 round-to-even ] unit-test
+[ -4 ] [ -4-1/2 round-to-even ] unit-test
+[ -4 ] [ -4-2/5 round-to-even ] unit-test
+[ 5 ] [ 4+3/5 round-to-even ] unit-test
+[ 4 ] [ 4+1/2 round-to-even ] unit-test
+[ 4 ] [ 4+2/5 round-to-even ] unit-test
+
+[ -5.0 ] [ -4.6 round-to-even ] unit-test
+[ -4.0 ] [ -4.5 round-to-even ] unit-test
+[ -4.0 ] [ -4.4 round-to-even ] unit-test
+[ 5.0 ] [ 4.6 round-to-even ] unit-test
+[ 4.0 ] [ 4.5 round-to-even ] unit-test
+[ 4.0 ] [ 4.4 round-to-even ] unit-test
+
+{ 0.0 } [ 0 2 round-to-decimal ] unit-test
+{ 1.0 } [ 1 2 round-to-decimal ] unit-test
+{ 1.23 } [ 1.2349 2 round-to-decimal ] unit-test
+{ 1.24 } [ 1.2350 2 round-to-decimal ] unit-test
+{ 1.24 } [ 1.2351 2 round-to-decimal ] unit-test
+{ -1.23 } [ -1.2349 2 round-to-decimal ] unit-test
+{ -1.24 } [ -1.2350 2 round-to-decimal ] unit-test
+{ -1.24 } [ -1.2351 2 round-to-decimal ] unit-test
+{
+    {
+        0.0 0.0 10000.0 12000.0 12300.0 12350.0 12346.0 12345.7
+        12345.68 12345.679 12345.6789 12345.6789 12345.678901
+        12345.6789012 12345.67890123 12345.678901235
+    }
+} [ 12345.67890123456 -6 9 [a,b] [ round-to-decimal ] with map ] unit-test
+
+{ 0 } [ 0 5 round-to-step ] unit-test
+{ 0 } [ 1 5 round-to-step ] unit-test
+{ 5 } [ 3 5 round-to-step ] unit-test
+{ 10 } [ 12 5 round-to-step ] unit-test
+{ 15 } [ 13 5 round-to-step ] unit-test

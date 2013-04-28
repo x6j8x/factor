@@ -61,8 +61,11 @@ M: complex ^n (^n) ;
 
 PRIVATE>
 
-: >rect ( z -- x y )
-    [ real-part ] [ imaginary-part ] bi ; inline
+GENERIC: >rect ( z -- x y )
+
+M: real >rect 0 ; inline
+
+M: complex >rect [ real-part ] [ imaginary-part ] bi ; inline
 
 : >float-rect ( z -- x y )
     >rect [ >float ] bi@ ; inline
@@ -200,6 +203,28 @@ M: integer frexp
             0.5 double>bits bitor bits>double
         ] [ 1 + ] bi [ * ] dip
     ] if-zero ; inline
+
+DEFER: copysign
+
+GENERIC# ldexp 1 ( x exp -- y )
+
+M: float ldexp
+    over fp-special? [ over zero? ] unless* [ drop ] [
+        [ double>bits dup -52 shift 0x7ff bitand 1023 - ] dip +
+        {
+            { [ dup -1074 < ] [ drop 0 copysign ] }
+            { [ dup 1023 > ] [ drop 0 < -1/0. 1/0. ? ] }
+            [
+                dup -1022 < [ 52 + -52 2^ ] [ 1 ] if
+                [ -0x7ff0,0000,0000,0001 bitand ]
+                [ 1023 + 52 shift bitor bits>double ]
+                [ * ] tri*
+            ]
+        } cond
+    ] if ;
+
+M: integer ldexp
+    2dup [ zero? ] either? [ 2drop 0 ] [ shift ] if ;
 
 GENERIC: log ( x -- y )
 
@@ -362,7 +387,14 @@ M: real atan >float atan ; inline
 
 : truncate ( x -- y ) dup 1 mod - ; inline
 
-: round ( x -- y ) dup sgn 2 / + truncate ; inline
+GENERIC: round ( x -- y )
+
+M: integer round ; inline
+
+M: ratio round
+    >fraction [ /mod abs 2 * ] keep >= [ dup 0 < -1 1 ? + ] when ;
+
+M: float round dup sgn 2 /f + truncate ;
 
 : floor ( x -- y )
     dup 1 mod

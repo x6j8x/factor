@@ -1,7 +1,7 @@
 ! Copyright (C) 2003, 2010 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: combinators destructors kernel kernel.private math
-namespaces sequences sequences.private ;
+USING: destructors kernel kernel.private math namespaces
+sequences sequences.private ;
 IN: io
 
 SYMBOLS: +byte+ +character+ ;
@@ -99,7 +99,9 @@ SYMBOL: error-stream
 
 : print ( str -- ) output-stream get stream-print ; inline
 
-: bl ( -- ) " " write ;
+: stream-bl ( stream -- ) " " swap stream-write ; inline
+
+: bl ( -- ) output-stream get stream-bl ;
 
 : each-morsel ( ..a handler: ( ..a data -- ..b ) reader: ( ..b -- ..a data ) -- ..a )
     [ dup ] compose swap while drop ; inline

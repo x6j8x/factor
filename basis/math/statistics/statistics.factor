@@ -210,26 +210,32 @@ PRIVATE>
 <PRIVATE
 
 : (sequence>assoc) ( seq map-quot insert-quot assoc -- assoc )
+    [ swap curry compose each ] keep ; inline
+
+: (sequence-index>assoc) ( seq map-quot insert-quot assoc -- assoc )
     [ swap curry compose each-index ] keep ; inline
 
 PRIVATE>
 
-: sequence>assoc! ( assoc seq map-quot: ( x -- ..y ) insert-quot: ( ..y index assoc -- ) -- assoc )
+: sequence>assoc! ( assoc seq map-quot: ( x -- ..y ) insert-quot: ( ..y assoc -- ) -- assoc )
     4 nrot (sequence>assoc) ; inline
 
 : sequence>assoc ( seq map-quot insert-quot exemplar -- assoc )
     clone (sequence>assoc) ; inline
 
+: sequence-index>assoc ( seq map-quot insert-quot exemplar -- assoc )
+    clone (sequence-index>assoc) ; inline
+
+: sequence-index>hashtable ( seq map-quot insert-quot -- hashtable )
+    H{ } sequence-index>assoc ; inline
+
 : sequence>hashtable ( seq map-quot insert-quot -- hashtable )
     H{ } sequence>assoc ; inline
 
 : histogram! ( hashtable seq -- hashtable )
-    [ ] [ nip inc-at ] sequence>assoc! ;
+    [ ] [ inc-at ] sequence>assoc! ;
 
 : histogram-by ( seq quot: ( x -- bin ) -- hashtable )
-    [ nip inc-at ] sequence>hashtable ; inline
-
-: histogram-index-by ( seq quot: ( x -- bin ) -- hashtable )
     [ inc-at ] sequence>hashtable ; inline
 
 : histogram ( seq -- hashtable )
@@ -241,21 +247,17 @@ PRIVATE>
 : normalized-histogram ( seq -- alist )
     [ histogram ] [ length ] bi '[ _ / ] assoc-map ;
 
-: collect-pairs ( seq quot: ( x y -- v k y ) -- hashtable )
-    [ [ nip ] dip push-at ] sequence>hashtable ; inline
+: collect-index-by ( ... seq quot: ( ... obj -- ... key ) -- ... hashtable )
+    [ dip swap ] curry [ push-at ] sequence-index>hashtable ; inline
 
-: collect-index-by ( seq quot: ( x -- x' ) -- hashtable )
-    [ swap dup ] prepose collect-pairs ; inline
-
-: collect-by ( seq quot: ( x -- x' ) -- hashtable )
-    [ dup ] prepose collect-pairs ; inline
+: collect-by ( ... seq quot: ( ... obj -- ... key ) -- ... hashtable )
+    [ keep swap ] curry [ push-at ] sequence>hashtable ; inline
 
 : equal-probabilities ( n -- array )
     dup recip <array> ; inline
 
 : mode ( seq -- x )
-    histogram >alist
-    [ ] [ [ [ second ] bi@ > ] most ] map-reduce first ;
+    histogram >alist [ second ] supremum-by first ;
 
 : minmax ( seq -- min max )
     [ first dup ] keep [ [ min ] [ max ] bi-curry bi* ] each ;
@@ -285,9 +287,13 @@ ALIAS: std sample-std
 
 : signal-to-noise ( seq -- x ) [ mean ] [ population-std ] bi / ;
 
-: mean-dev ( seq -- x ) dup mean v-n vabs mean ;
+: demean ( seq -- seq' ) dup mean v-n ;
 
-: median-dev ( seq -- x ) dup median v-n vabs mean ;
+: mean-dev ( seq -- x ) demean vabs mean ;
+
+: demedian ( seq -- seq' ) dup median v-n ;
+
+: median-dev ( seq -- x ) demedian vabs mean ;
 
 : ste-ddof ( seq n -- x ) '[ _ std-ddof ] [ length ] bi sqrt / ;
 
@@ -319,7 +325,7 @@ ALIAS: std sample-std
     [ swapd * - ] keep ;
 
 : cov-ddof ( {x} {y} ddof -- cov )
-    [ [ dup mean v-n ] bi@ v* ] dip mean-ddof ;
+    [ [ demean ] bi@ v* ] dip mean-ddof ;
 
 : population-cov ( {x} {y} -- cov ) 0 cov-ddof ; inline
 
@@ -336,21 +342,17 @@ ALIAS: std sample-std
 : cum-map ( seq identity quot -- seq' )
     swapd [ dup ] compose map nip ; inline
 
-: cum-map0 ( seq identity quot -- seq' )
-    accumulate nip ; inline
-
 : cum-sum ( seq -- seq' )
     0 [ + ] cum-map ;
 
 : cum-sum0 ( seq -- seq' )
-    0 [ + ] cum-map0 ;
+    0 [ + ] accumulate nip ;
 
 : cum-product ( seq -- seq' )
     1 [ * ] cum-map ;
 
 : cum-count ( seq quot -- seq' )
-    [ 0 ] dip
-    '[ _ call [ 1 + ] when ] cum-map ; inline
+    [ 0 ] dip '[ _ call [ 1 + ] when ] cum-map ; inline
 
 : cum-min ( seq -- seq' )
     dup ?first [ min ] cum-map ;
@@ -371,23 +373,22 @@ ALIAS: std sample-std
     [ dup log * ] [ 1 swap - dup log * ] bi + neg 2 log / ;
 
 : standardize ( u -- v )
-    [ dup mean v-n ] [ sample-std ] bi
-    dup zero? [ drop ] [ v/n ] if ;
+    [ demean ] [ sample-std ] bi [ v/n ] unless-zero ;
 
 : standardize-2d ( u -- v )
-    flip dup [ [ mean ] [ sample-std ] bi 2array ] map
-    [ [ first v-n ] 2map ] keep [ second v/n ] 2map flip ;
+    flip [ standardize ] map flip ;
 
 : differences ( u -- v )
-    [ 1 tail-slice ] keep [ - ] 2map ;
+    [ rest-slice ] keep v- ;
 
 : rescale ( u -- v )
     dup minmax over - [ v-n ] [ v/n ] bi* ;
 
+: rankings ( histogram -- assoc )
+    sort-keys 0 swap [ rot [ + ] keep swapd ] H{ } assoc-map-as nip ;
+
 : rank-values ( seq -- seq' )
-    [
-        [ ] [ length iota ] bi zip sort-keys
-        [ [ first ] bi@ = ] monotonic-split
-        [ values ] map [ 0 [ length + ] accumulate nip ] [ ] bi zip
-    ] [ length f <array> ] bi
-    [ '[ first2 [ _ set-nth ] with each ] each ] keep ;
+    dup histogram rankings '[ _ at ] map ;
+
+: z-score ( seq -- n )
+    [ demean ] [ sample-std ] bi v/n ;

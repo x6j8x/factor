@@ -126,7 +126,7 @@ M: output-port stream-write1
 
 : write-in-groups ( byte-array port -- )
     [ binary-object uchar <c-direct-array> ] dip
-    [ buffer>> size>> <sliced-groups> ] [ '[ _ stream-write ] ] bi
+    [ buffer>> size>> <groups> ] [ '[ _ stream-write ] ] bi
     each ;
 
 M: output-port stream-write
@@ -230,9 +230,7 @@ M: object underlying-handle underlying-port handle>> ;
 
 ! Fast-path optimization
 
-HINTS: decoder-read-until { string input-port utf8 } { string input-port ascii } ;
-
-HINTS: decoder-readln { input-port utf8 } { input-port ascii } ;
+HINTS: (decode-until) { string input-port object } ;
 
 HINTS: M\ input-port stream-read-partial-unsafe
     { fixnum byte-array input-port }

@@ -134,14 +134,14 @@ HELP: sorted-histogram
 
 HELP: sequence>assoc
 { $values
-    { "seq" sequence } { "map-quot" { $quotation "( x -- ..y )" } } { "insert-quot" { $quotation "( ..y assoc -- )" } } { "exemplar" "an exemplar assoc" }
+    { "seq" sequence } { "map-quot" $quotation } { "insert-quot" quotation } { "exemplar" "an exemplar assoc" }
     { "assoc" assoc }
 }
 { $description "Iterates over a sequence, allowing elements of the sequence to be added to a newly created " { $snippet "assoc" } ". The " { $snippet "map-quot" } " gets passed each element from the sequence. Its outputs are passed along with the assoc being constructed to the " { $snippet "insert-quot" } ", which can modify the assoc in response." }
 { $examples
     { $example "! Iterate over a sequence and increment the count at each element"
                "! The first quotation has stack effect ( key -- key ), a no-op"
-               "USING: assocs prettyprint math.statistics ;"
+               "USING: assocs prettyprint kernel math.statistics ;"
                "\"aaabc\" [ ] [ inc-at ] H{ } sequence>assoc ."
                "H{ { 97 3 } { 98 1 } { 99 1 } }"
     }
@@ -149,8 +149,7 @@ HELP: sequence>assoc
 
 HELP: sequence>assoc!
 { $values
-    { "assoc" assoc } { "seq" sequence } { "map-quot" { $quotation "( x -- ..y )" } } { "insert-quot" { $quotation "( ..y assoc -- )" } }
-}
+    { "assoc" assoc } { "seq" sequence } { "map-quot" quotation } { "insert-quot" quotation } }
 { $description "Iterates over a sequence, allowing elements of the sequence to be added to an existing " { $snippet "assoc" } ". The " { $snippet "map-quot" } " gets passed each element from the sequence. Its outputs are passed along with the assoc being constructed to the " { $snippet "insert-quot" } ", which can modify the assoc in response." }
 { $examples
     { $example "! Iterate over a sequence and add the counts to an existing assoc"
@@ -162,13 +161,13 @@ HELP: sequence>assoc!
 
 HELP: sequence>hashtable
 { $values
-    { "seq" sequence } { "map-quot" { $quotation "( x -- ..y )" } } { "insert-quot" { $quotation "( ..y assoc -- )" } }
+    { "seq" sequence } { "map-quot" quotation } { "insert-quot" quotation }
     { "hashtable" hashtable }
 }
 { $description "Iterates over a sequence, allowing elements of the sequence to be added to a newly created hashtable. The " { $snippet "map-quot" } " gets passed each element from the sequence. Its outputs are passed along with the assoc being constructed to the " { $snippet "insert-quot" } ", which can modify the assoc in response." }
 { $examples
     { $example "! Count the number of times an element occurs in a sequence"
-               "USING: assocs prettyprint math.statistics ;"
+               "USING: assocs kernel prettyprint math.statistics ;"
                "\"aaabc\" [ ] [ inc-at ] sequence>hashtable ."
                "H{ { 97 3 } { 98 1 } { 99 1 } }"
     }
@@ -237,6 +236,41 @@ HELP: rescale
 { $values { "u" sequence } { "v" sequence } }
 { $description "Returns " { $snippet "u" } " rescaled to run from 0 to 1 over the range min to max." } ;
 
+HELP: collect-by
+{ $values
+    { "seq" sequence } { "quot" { $quotation "( ... obj -- ... key )" } }
+    { "hashtable" hashtable }
+}
+{ $description "Applies a quotation to each element in the input sequence and returns a " { $snippet "hashtable" } " of like elements. The keys of this " { $snippet "hashtable" } " are the output of " { $snippet "quot" } " and the values at each key are the elements that transformed to that key." }
+{ $examples
+    "Collect even and odd elements:"
+    { $example
+               "USING: math math.statistics prettyprint ;"
+               "{ 11 12 13 14 14 13 12 11 } [ odd? ] collect-by ."
+               "H{ { f V{ 12 14 14 12 } } { t V{ 11 13 13 11 } } }"
+    }
+}
+{ $notes "May be named " { $snippet "group-by" } " in other languages." } ;
+
+HELP: collect-index-by
+{ $values
+    { "seq" sequence } { "quot" { $quotation "( ... obj -- ... key )" } }
+    { "hashtable" hashtable }
+}
+{ $description "Applies a quotation to each element in the input sequence and returns a " { $snippet "hashtable" } " of like elements. The keys of this " { $snippet "hashtable" } " are the output of " { $snippet "quot" } " and the values at each key are the indices for the elements that transformed to that key." }
+{ $examples
+    "Collect even and odd elements:"
+    { $example
+               "USING: math math.statistics prettyprint ;"
+               "{ 11 12 13 14 14 13 12 11 } [ odd? ] collect-index-by ."
+               "H{ { f V{ 1 3 4 6 } } { t V{ 0 2 5 7 } } }"
+    }
+} ;
+
+HELP: z-score
+{ $values { "seq" sequence } { "n" number } }
+{ $description "Calculates the Z-Score for " { $snippet "seq" } "." } ;
+
 ARTICLE: "histogram" "Computing histograms"
 "Counting elements in a sequence:"
 { $subsections
@@ -256,7 +290,6 @@ ARTICLE: "cumulative" "Computing cumulative sequences"
 "Cumulative mapping combinators:"
 { $subsections
     cum-map
-    cum-map0
 }
 "Cumulative math:"
 { $subsections
@@ -293,6 +326,8 @@ ARTICLE: "math.statistics" "Statistics"
 { $subsections kth-smallest }
 "Counting the frequency of occurrence of elements:"
 { $subsections "histogram" }
+"Collecting related items:"
+{ $subsections collect-by collect-index-by }
 "Computing cumulative sequences:"
 { $subsections "cumulative" } ;
 

@@ -2,12 +2,12 @@
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors alien alien.c-types alien.data alien.strings
 arrays assocs cocoa cocoa.application cocoa.classes
-cocoa.pasteboard cocoa.runtime cocoa.subclassing cocoa.types
-cocoa.views combinators core-foundation.strings core-graphics
-core-graphics.types core-text io.encodings.utf8 kernel locals
-math math.rectangles namespaces opengl sequences threads
-ui.gadgets ui.gadgets.private ui.gadgets.worlds ui.gestures
-ui.private ;
+cocoa.messages cocoa.pasteboard cocoa.runtime cocoa.subclassing
+cocoa.types cocoa.views combinators core-foundation.strings
+core-graphics core-graphics.types core-text io.encodings.utf8
+kernel locals math math.rectangles namespaces opengl sequences
+threads ui.gadgets ui.gadgets.private ui.gadgets.worlds
+ui.gestures ui.private ;
 IN: ui.backend.cocoa.views
 
 : send-mouse-moved ( view event -- )
@@ -148,6 +148,23 @@ CONSTANT: selector>action H{
 
 CLASS: FactorView < NSOpenGLView NSTextInput
 [
+
+    METHOD: void prepareOpenGL [
+
+        self SEL: setWantsBestResolutionOpenGLSurface:
+        -> respondsToSelector: c-bool> [
+
+            self SEND: setWantsBestResolutionOpenGLSurface:
+            1 swap execute( x x x -- )
+
+            self SEND: backingScaleFactor execute( x x -- x )
+            dup 1.0 > [
+                gl-scale-factor set-global t retina? set-global
+            ] [ drop ] if
+
+        ] when
+    ]
+
     ! Rendering
     METHOD: void drawRect: NSRect rect [ self window [ draw-world ] when* ]
 
@@ -305,13 +322,6 @@ CLASS: FactorView < NSOpenGLView NSTextInput
 
     METHOD: NSInteger conversationIdentifier [ self alien-address ]
 
-    METHOD: void prepareOpenGL [
-        self 1 -> setWantsBestResolutionOpenGLSurface:
-        self -> backingScaleFactor dup 1.0 > [
-            gl-scale-factor set-global t retina? set-global
-        ] [ drop ] if
-    ]
-
     ! Initialization
     METHOD: void updateFactorGadgetSize: id notification
     [
@@ -379,6 +389,17 @@ CLASS: FactorWindowDelegate < NSObject
     [
         notification -> object -> contentView
         [ window ungraft ] [ unregister-window ] bi
+    ]
+
+    METHOD: void windowDidChangeBackingProperties: id notification
+    [
+
+        notification -> object dup SEL: backingScaleFactor
+        -> respondsToSelector: c-bool> [
+            SEND: backingScaleFactor execute( x x -- x )
+            [ [ 1.0 > ] keep f ? gl-scale-factor set-global ]
+            [ 1.0 > retina? set-global ] bi
+        ] [ drop ] if
     ]
 ]
 

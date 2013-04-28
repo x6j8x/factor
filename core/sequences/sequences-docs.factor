@@ -59,11 +59,11 @@ HELP: immutable
 
 HELP: new-sequence
 { $values { "len" "a non-negative integer" } { "seq" sequence } { "newseq" "a mutable sequence" } }
-{ $contract "Outputs a mutable sequence of length " { $snippet "n" } " which can hold the elements of " { $snippet "seq" } ". The initial contents of the sequence are undefined." } ;
+{ $contract "Outputs a mutable sequence of length " { $snippet "len" } " which can hold the elements of " { $snippet "seq" } ". The initial contents of the sequence are undefined." } ;
 
 HELP: new-resizable
 { $values { "len" "a non-negative integer" } { "seq" sequence } { "newseq" "a resizable mutable sequence" } }
-{ $contract "Outputs a resizable mutable sequence with an initial capacity of " { $snippet "n" } " elements and zero length, which can hold the elements of " { $snippet "seq" } "." }
+{ $contract "Outputs a resizable mutable sequence with an initial capacity of " { $snippet "len" } " elements and zero length, which can hold the elements of " { $snippet "seq" } "." }
 { $examples
     { $example "USING: prettyprint sequences ;" "300 V{ } new-resizable ." "V{ }" }
     { $example "USING: prettyprint sequences ;" "300 SBUF\" \" new-resizable ." "SBUF\" \"" }
@@ -178,6 +178,10 @@ HELP: bounds-check
 HELP: ?nth
 { $values { "n" "an integer" } { "seq" sequence } { "elt/f" "an object or " { $link f } } }
 { $description "A forgiving version of " { $link nth } ". If the index is out of bounds, or if the sequence is " { $link f } ", simply outputs " { $link f } "." } ;
+
+HELP: ?set-nth
+{ $values { "elt" object } { "n" "an integer" } { "seq" sequence } }
+{ $description "A forgiving version of " { $link set-nth } ".  If the index is out of bounds, does nothing." } ;
 
 HELP: ?first
 { $values { "seq" sequence } { "elt/f" "an object or " { $link f } } }
@@ -624,7 +628,13 @@ HELP: join
 { $notes "If the " { $snippet "glue" } " sequence is empty, this word calls " { $link concat-as } "." }
 { $errors "Throws an error if one of the sequences in " { $snippet "seq" } " contains elements not permitted in sequences of the same class as " { $snippet "glue" } "." } ;
 
-{ join concat concat-as } related-words
+HELP: join-as
+{ $values { "seq" sequence } { "glue" sequence } { "exemplar" sequence } { "newseq" sequence } }
+{ $description "Concatenates a sequence of sequences together into one sequence, placing a copy of " { $snippet "glue" } " between each pair of sequences. The resulting sequence is of the same class as " { $snippet "glue" } "." }
+{ $notes "If the " { $snippet "glue" } " sequence is empty, this word calls " { $link concat-as } "." }
+{ $errors "Throws an error if one of the sequences in " { $snippet "seq" } " contains elements not permitted in sequences of the same class as " { $snippet "exemplar" } "." } ;
+
+{ join join-as concat concat-as } related-words
 
 HELP: last
 { $values { "seq" sequence } { "elt" object } }

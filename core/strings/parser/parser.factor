@@ -1,8 +1,7 @@
 ! Copyright (C) 2008, 2009 Slava Pestov, Doug Coleman.
 ! See http://factorcode.org/license.txt for BSD license.
 USING: accessors arrays assocs combinators kernel lexer make
-math math.order math.parser namespaces parser sequences
-splitting strings ;
+math math.parser namespaces sequences splitting strings ;
 IN: strings.parser
 
 ERROR: bad-escape char ;
@@ -41,8 +40,8 @@ name>char-hook [
 
 : next-escape ( str -- ch str' )
     dup first {
-        { CHAR: u [ 1 tail-slice unicode-escape ] }
-        { CHAR: x [ 1 tail-slice hex-escape ] }
+        { CHAR: u [ rest-slice unicode-escape ] }
+        { CHAR: x [ rest-slice hex-escape ] }
         [ drop unclip-slice escape swap ]
     } case ;
 
@@ -164,7 +163,7 @@ ERROR: trailing-characters string ;
             (parse-multiline-string)
         ] if*
     ] [
-        unexpected-eof
+        throw-unexpected-eof
     ] if ;
 
 PRIVATE>

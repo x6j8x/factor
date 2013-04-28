@@ -1,11 +1,12 @@
 ! Copyright (C) 2012 John Benediktsson
 ! See http://factorcode.org/license.txt for BSD license
 
-USING: assocs assocs.extras combinators.short-circuit fry
+USING: accessors arrays assocs assocs.extras byte-arrays
+combinators combinators.short-circuit compression.zlib fry
 grouping kernel locals math math.combinatorics math.constants
 math.functions math.order math.primes math.ranges
-math.statistics math.vectors memoize random sequences
-sequences.extras sets sorting ;
+math.ranges.private math.statistics math.vectors memoize random
+sequences sequences.extras sets sorting ;
 
 IN: math.extras
 
@@ -27,9 +28,9 @@ MEMO: stirling ( n k -- x )
 :: ramanujan ( x -- y )
     pi sqrt x e / x ^ * x 8 * 4 + x * 1 + x * 1/30 + 1/6 ^ * ;
 
-<PRIVATE
-
 DEFER: bernoulli
+
+<PRIVATE
 
 : (bernoulli) ( p -- n )
     [ iota ] [ 1 + ] bi [
@@ -95,10 +96,10 @@ PRIVATE>
     <clumps> [ mean ] map ;
 
 : exponential-moving-average ( seq a -- newseq )
-    [ 1 ] 2dip [ [ dupd swap - ] dip * + dup ] curry map nip ;
+    [ 1 ] 2dip '[ dupd swap - _ * + dup ] map nip ;
 
 : moving-median ( u n -- v )
-    <clumps> [ median ] map ;
+    clump [ median ] map ;
 
 : moving-supremum ( u n -- v )
     <clumps> [ supremum ] map ;
@@ -110,35 +111,36 @@ PRIVATE>
     <clumps> [ sum ] map ;
 
 : moving-count ( ... u n quot: ( ... elt -- ... ? ) -- ... v )
-    [ <clumps> ] [ [ count ] curry map ] bi* ; inline
+    [ <clumps> ] [ '[ _ count ] map ] bi* ; inline
 
 : nonzero ( seq -- seq' )
     [ zero? not ] filter ;
 
 : bartlett ( n -- seq )
-    dup 1 <= [ 1 = { 1 } { } ? ] [
+    dup 1 <= [ 1 = [ 1 1array ] [ { } ] if ] [
         [ iota ] [ 1 - 2 / ] bi [
             [ recip * ] [ >= ] 2bi [ 2 swap - ] when
         ] curry map
     ] if ;
 
+: [0,2pi] ( n -- seq )
+    [ iota ] [ 1 - 2pi swap / ] bi v*n ;
+
 : hanning ( n -- seq )
-    dup 1 <= [ 1 = { 1 } { } ? ] [
-        [ iota ] [ 1 - 2pi swap / ] bi v*n
-        [ cos -0.5 * 0.5 + ] map!
+    dup 1 <= [ 1 = [ 1 1array ] [ { } ] if ] [
+        [0,2pi] [ cos -0.5 * 0.5 + ] map!
     ] if ;
 
 : hamming ( n -- seq )
-    dup 1 <= [ 1 = { 1 } { } ? ] [
-        [ iota ] [ 1 - 2pi swap / ] bi v*n
-        [ cos -0.46 * 0.54 + ] map!
+    dup 1 <= [ 1 = [ 1 1array ] [ { } ] if ] [
+        [0,2pi] [ cos -0.46 * 0.54 + ] map!
     ] if ;
 
 : blackman ( n -- seq )
-    dup 1 <= [ 1 = { 1 } { } ? ] [
-        [ iota ] [ 1 - 2pi swap / ] bi v*n
-        [ [ cos -0.5 * ] map ] [ [ 2 * cos 0.08 * ] map ] bi
-        v+ 0.42 v+n
+    dup 1 <= [ 1 = [ 1 1array ] [ { } ] if ] [
+        [0,2pi] [
+            [ cos -0.5 * ] [ 2 * cos 0.08 * ] bi + 0.42 +
+        ] map
     ] if ;
 
 : nan-sum ( seq -- n )
@@ -198,3 +200,62 @@ PRIVATE>
 
 : unique-indices ( seq -- unique indices )
     [ members ] keep over dup length iota H{ } zip-as '[ _ at ] map ;
+
+<PRIVATE
+
+: steps ( a b length -- a b step )
+    [ 2dup swap - ] dip / ; inline
+
+PRIVATE>
+
+: linspace[a,b) ( a b length -- seq )
+    steps ,b) <range> ;
+
+: linspace[a,b] ( a b length -- seq )
+    {
+        { [ dup 1 < ] [ 3drop { } ] }
+        { [ dup 1 = ] [ 2drop 1array ] }
+        [ 1 - steps <range> ]
+    } cond ;
+
+: logspace[a,b) ( a b length base -- seq )
+    [ linspace[a,b) ] dip swap n^v ;
+
+: logspace[a,b] ( a b length base -- seq )
+    [ linspace[a,b] ] dip swap n^v ;
+
+: majority ( seq -- elt/f )
+    [ f 0 ] dip [
+        over zero? [ 2nip 1 ] [
+            pick = [ 1 + ] [ 1 - ] if
+        ] if
+    ] each zero? [ drop f ] when ;
+
+: compression-lengths ( a b -- len(a+b) len(a) len(b) )
+    [ append ] 2keep [ >byte-array compress data>> length ] tri@ ;
+
+: compression-distance ( a b -- n )
+    compression-lengths sort-pair [ - ] [ / ] bi* ;
+
+: compression-dissimilarity ( a b -- n )
+    compression-lengths + / ;
+
+GENERIC: round-to-even ( x -- y )
+
+M: integer round-to-even ; inline
+
+M: ratio round-to-even
+    >fraction [ /mod abs 2 * ] keep > [ dup 0 < -1 1 ? + ] when ;
+
+M: float round-to-even
+    dup 0 > [
+        dup 0x1p52 <= [ 0x1p52 + 0x1p52 - ] when
+    ] [
+        dup -0x1p52 >= [ 0x1p52 - 0x1p52 + ] when
+    ] if ;
+
+: round-to-decimal ( x n -- y )
+    10^ [ * 0.5 over 0 > [ + ] [ - ] if truncate ] [ / ] bi ;
+
+: round-to-step ( x step -- y )
+    [ [ / round ] [ * ] bi ] unless-zero ;

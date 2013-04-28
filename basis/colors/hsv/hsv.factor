@@ -1,7 +1,7 @@
 ! Copyright (C) 2008 Eduardo Cavazos.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: accessors arrays colors combinators kernel locals math
-math.functions sequences sorting ;
+USING: accessors arrays colors combinators fry kernel locals
+math math.functions random sequences sorting ;
 IN: colors.hsv
 
 ! h [0,360)
@@ -40,11 +40,18 @@ M: hsva >rgba ( hsva -- rgba )
             { 4 [ [ t ] [ p ] [ value>> ] tri ] }
             { 5 [ [ value>> ] [ p ] [ q ] tri ] }
         } case
-    ] [ alpha>> ] bi <rgba> ;
+    ] [ alpha>> ] bi <rgba> ; inline
+
+<PRIVATE
+
+: sort-triple ( a b c -- d e f )
+    sort-pair [ sort-pair ] dip sort-pair ;
+
+PRIVATE>
 
 :: rgba>hsva ( rgba -- hsva )
     rgba >rgba-components :> ( r g b a )
-    r g b 3array natural-sort first3 :> ( z y x )
+    r g b sort-triple :> ( z y x )
     x z = x zero? or [ 0 0 x a <hsva> ] [
         {
             { [ r x = g z = and ] [ 5 x b - x z - / + ] }
@@ -64,3 +71,8 @@ M: hsva >rgba ( hsva -- rgba )
         [ value>> ]
         [ alpha>> ]
     } cleave <hsva> ;
+
+: golden-rainbow ( num-colors saturation luminance -- colors )
+    [ random-unit ] 3dip '[
+        0.618033988749895 + 1.0 mod dup _ _ 1.0 <hsva>
+    ] replicate nip ;

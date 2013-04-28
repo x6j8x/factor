@@ -16,6 +16,14 @@ HELP: directory?
 { $values { "file-info" file-info } { "?" "a boolean" } }
 { $description "Tests if " { $snippet "file-info" } " is a directory." } ;
 
+HELP: regular-file?
+{ $values { "file-info" file-info } { "?" "a boolean" } }
+{ $description "Tests if " { $snippet "file-info" } " is a normal file." } ;
+
+HELP: symbolic-link?
+{ $values { "file-info" file-info } { "?" "a boolean" } }
+{ $description "Tests if " { $snippet "file-info" } " is a symbolic link." } ;
+
 HELP: file-systems
 { $values { "array" array } }
 { $description "Returns an array of " { $link file-system-info } " objects returned by iterating the mount points and calling " { $link file-system-info } " on each." } ;
@@ -59,6 +67,8 @@ ARTICLE: "io.files.info" "File system meta-data"
     link-info
     exists?
     directory?
+    regular-file?
+    symbolic-link?
 }
 "File types:"
 { $subsections "file-types" }

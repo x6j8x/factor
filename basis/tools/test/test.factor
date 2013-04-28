@@ -1,14 +1,13 @@
 ! Copyright (C) 2003, 2010 Slava Pestov.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: accessors arrays assocs combinators compiler.units
-continuations debugger effects fry generalizations
-sequences.generalizations io io.files io.styles kernel lexer
-locals macros math.parser namespaces parser vocabs.parser
-prettyprint quotations sequences source-files splitting
-stack-checker summary unicode.case vectors vocabs vocabs.loader
-vocabs.files vocabs.metadata words tools.errors
-source-files.errors source-files.errors.debugger io.streams.string
-make compiler.errors ;
+USING: accessors arrays assocs combinators command-line
+compiler.units continuations debugger effects fry
+generalizations io kernel lexer locals macros namespaces parser
+prettyprint quotations sequences sequences.generalizations
+source-files source-files.errors source-files.errors.debugger
+splitting stack-checker summary tools.errors unicode.case vocabs
+vocabs.files vocabs.metadata vocabs.parser words ;
+FROM: vocabs.hierarchy => load ;
 IN: tools.test
 
 TUPLE: test-failure < source-file-error continuation ;
@@ -21,7 +20,7 @@ SYMBOL: test-failures
 
 test-failures [ V{ } clone ] initialize
 
-T{ error-type
+T{ error-type-holder
    { type +test-failure+ }
    { word ":test-failures" }
    { plural "unit test failures" }
@@ -65,16 +64,16 @@ SYMBOL: file
     [ quot infer drop f f ] [ t ] recover ;
 
 TUPLE: did-not-fail ;
-CONSTANT: did-not-fail T{ did-not-fail }
+CONSTANT: did-not-fail-literal T{ did-not-fail }
 
 M: did-not-fail summary drop "Did not fail" ;
 
 :: (must-fail-with) ( quot pred -- error ? )
-    [ { } quot with-datastack drop did-not-fail t ]
+    [ { } quot with-datastack drop did-not-fail-literal t ]
     [ dup pred call( error -- ? ) [ drop f f ] [ t ] if ] recover ;
 
 :: (must-fail) ( quot -- error ? )
-    [ { } quot with-datastack drop did-not-fail t ] [ drop f f ] recover ;
+    [ { } quot with-datastack drop did-not-fail-literal t ] [ drop f f ] recover ;
 
 : experiment-title ( word -- string )
     "(" ?head drop ")" ?tail drop
@@ -171,3 +170,7 @@ M: test-failure error. ( error -- )
 
 : test-all ( -- ) vocabs filter-don't-test test-vocabs ;
 
+: test-main ( -- )
+    command-line get [ [ load ] [ test ] bi ] each ;
+
+MAIN: test-main

@@ -1,7 +1,7 @@
 ! Copyright (C) 2012 John Benediktsson
 ! See http://factorcode.org/license.txt for BSD license
 
-USING: help.markup help.syntax math sequences ;
+USING: help.markup help.syntax kernel math sequences ;
 
 IN: math.extras
 
@@ -57,3 +57,32 @@ HELP: sinc
 { $values { "x" number } { "y" number } }
 { $description "Returns the " { $link sinc } " function, calculated according to " { $snippet "sin(pi * x) / (pi * x)" } ". The name " { $link sinc } " is short for \"sine cardinal\" or \"sinus cardinalis\"." }
 { $notes { $snippet "0 sinc" } " is the limit value of 1." } ;
+
+HELP: linspace[a,b)
+{ $values { "a" number } { "b" number } { "length" integer } { "seq" sequence } }
+{ $description "Return evenly spaced numbers over an interval " { $snippet "[a,b)" } "." } ;
+
+HELP: linspace[a,b]
+{ $values { "a" number } { "b" number } { "length" integer } { "seq" sequence } }
+{ $description "Return evenly spaced numbers over an interval " { $snippet "[a,b]" } "." } ;
+
+HELP: logspace[a,b)
+{ $values { "a" number } { "b" number } { "length" integer } { "base" number } { "seq" sequence } }
+{ $description "Return evenly spaced numbers on a log scaled interval " { $snippet "[base^a,base^b)" } "." } ;
+
+HELP: logspace[a,b]
+{ $values { "a" number } { "b" number } { "length" integer } { "base" number } { "seq" sequence } }
+{ $description "Return evenly spaced numbers on a log scaled interval " { $snippet "[base^a,base^b]" } "." } ;
+
+HELP: majority
+{ $values { "seq" sequence } { "elt/f" object } }
+{ $description "Returns the element of " { $snippet "seq" } " that is in the majority, provided there is such an element, using a linear-time majority vote algorithm." } ;
+
+HELP: round-to-decimal
+{ $values { "x" real } { "n" integer } { "y" real } }
+{ $description "Outputs the number closest to " { $snippet "x" } ", rounded to " { $snippet "n" } " decimal places." }
+{ $notes "The result is not necessarily an integer." }
+{ $examples
+    { $example "USING: math.extras prettyprint ;" "1.23456 2 round-to-decimal ." "1.23" }
+    { $example "USING: math.extras prettyprint ;" "12345.6789 -3 round-to-decimal ." "12000.0" }
+} ;

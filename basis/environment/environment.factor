@@ -35,5 +35,5 @@ HOOK: set-os-envs-pointer os ( malloc -- )
     [
         os windows? ";" ":" ? split
         [ add-vocab-root ] each
-    ] when*    
+    ] when*
 ] "environment" add-startup-hook

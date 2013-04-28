@@ -73,7 +73,7 @@ M: definition-completion row-columns
 M: word-completion row-color
     [ vocabulary>> ] [ manifest>> ] bi* {
         { [ dup not ] [ COLOR: black ] }
-        { [ 2dup search-vocab-names>> keys member? ] [ COLOR: black ] }
+        { [ 2dup search-vocab-names>> in? ] [ COLOR: black ] }
         { [ over ".private" tail? ] [ COLOR: dark-red ] }
         [ COLOR: dark-gray ]
     } cond 2nip ;
@@ -93,9 +93,9 @@ M: color-completion row-color
     [ manifest>> ] [ editor-caret ] [ model>> ] tri up-to-caret " \r\n" split
     {
         { [ dup complete-vocab? ] [ 2drop vocab-completion ] }
-        { [ dup complete-CHAR:? ] [ 2drop char-completion ] }
-        { [ dup complete-COLOR:? ] [ 2drop color-completion ] }
-        { [ dup complete-P"? ] [ 2drop path-completion ] }
+        { [ dup complete-char? ] [ 2drop char-completion ] }
+        { [ dup complete-color? ] [ 2drop color-completion ] }
+        { [ dup complete-pathname? ] [ 2drop path-completion ] }
         [ drop <word-completion> ]
     } cond ;
 
